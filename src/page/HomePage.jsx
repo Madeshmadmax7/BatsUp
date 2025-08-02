@@ -6,7 +6,7 @@ import TournamentDisplay from "../components/TournamentDisplay";
 
 const Home = () => {
     return (
-        <div className="bg-[#f8f4e6] rounded-b-3xl">
+        <div className="overflow-x-hidden">
             <Header />
             <CricketDashboard />
             <StadiumVideoCard />

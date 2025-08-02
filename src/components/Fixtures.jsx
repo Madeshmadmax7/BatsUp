@@ -1,69 +1,74 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-const FixturesPage = () => {
-const fixtures = {
-    round1: [
-    { teamA: 'Astralis', teamB: 'Gambit', winner: 'Astralis' },
-    { teamA: 'Immortals', teamB: 'G2', winner: 'G2' },
-    { teamA: 'FaZe', teamB: 'North', winner: 'FaZe' },
-    { teamA: 'Virtus.pro', teamB: 'Liquid', winner: 'Virtus.pro' },
+const Fixture = () => {
+const [selectedRound, setSelectedRound] = useState('Round 1');
+
+const rounds = {
+    'Round 1': [
+    { date: '15 March 2025', team1: 'India', team2: 'Bangladesh', time: '3:00 PM' },
+    { date: '16 March 2025', team1: 'Australia', team2: 'Sri Lanka', time: '3:00 PM' },
+    { date: '17 March 2025', team1: 'Pakistan', team2: 'England', time: '3:00 PM' },
+    { date: '18 March 2025', team1: 'South Africa', team2: 'Afghanisthan', time: '3:00 PM' },
     ],
-    round2: [
-    { teamA: 'Astralis', teamB: 'G2', winner: 'Astralis' },
-    { teamA: 'FaZe', teamB: 'Virtus.pro', winner: 'FaZe' },
+    'Round 2': [
+    { date: '22 March 2025', team1: 'TBD', team2: 'TBD', time: '3:00 PM' },
+    { date: '23 March 2025', team1: 'TBD', team2: 'TBD', time: '3:00 PM' },
     ],
-    semifinals: [
-    { teamA: 'Astralis', teamB: 'FaZe', winner: 'Astralis' },
-    ],
-    finals: [
-    { teamA: 'Astralis', teamB: 'Gambit', winner: null },
+    'Round 3': [
+    { date: '28 March 2025', team1: 'TBD', team2: 'TBD', time: '3:00 PM' },
     ],
 };
 
-const renderMatch = ({ teamA, teamB, winner }, idx) => (
-    <div key={idx} className="bg-[#1e293b] text-white p-3 rounded-lg w-48 mb-4">
-    <div className={`flex justify-between items-center p-1 rounded ${winner === teamA ? 'bg-yellow-600' : 'bg-gray-700'}`}>
-        <span>{teamA}</span>
-        <span>{winner === teamA ? '1' : '0'}</span>
-    </div>
-    <div className={`flex justify-between items-center p-1 rounded ${winner === teamB ? 'bg-yellow-600' : 'bg-gray-700'}`}>
-        <span>{teamB}</span>
-        <span>{winner === teamB ? '1' : '0'}</span>
-    </div>
-    </div>
-);
+const roundTabs = Object.keys(rounds);
 
 return (
-    <div className="min-h-screen bg-[#0f172a] text-white pt-24 px-6">
-    <h1 className="text-3xl font-bold mb-10 text-center">Spring Aim Masters – Fixtures</h1>
+    <div className="min-h-screen bg-black text-white py-10 px-4 font-sans">
+    <div className="max-w-3xl mx-auto mt-15">
+        <h1 className="text-3xl font-bold text-center mb-8">Cricket Fixtures</h1>
 
-    <div className="flex gap-12 justify-center overflow-x-auto pb-10">
-        {/* Round 1 */}
-        <div>
-        <h2 className="text-center mb-4 text-lg font-semibold">Round 1</h2>
-        {fixtures.round1.map(renderMatch)}
+        <div className="flex justify-center mb-6 border-b border-gray-700">
+        {roundTabs.map((round) => (
+            <button
+            key={round}
+            onClick={() => setSelectedRound(round)}
+            className={`px-4 py-2 text-sm sm:text-base transition-all duration-200 border-b-2 ${
+                selectedRound === round
+                ? 'border-white text-white'
+                : 'border-transparent text-gray-400 hover:text-white'
+            }`}
+            >
+            {round}
+            </button>
+        ))}
         </div>
 
-        {/* Round 2 */}
-        <div>
-        <h2 className="text-center mb-4 text-lg font-semibold">Quarterfinals</h2>
-        {fixtures.round2.map(renderMatch)}
+        <div className="space-y-3">
+        {rounds[selectedRound].map((match, index) => (
+            <div
+            key={index}
+            className="bg-[#1a1a1a] border border-gray-700 rounded-md px-4 py-3 text-sm sm:text-base flex justify-between items-center text-center"
+            >
+            <div className="w-1/4 truncate">
+                <span className={`${match.team1 === 'TBD' ? 'text-gray-500' : ''}`}>
+                {match.team1}
+                </span>
+            </div>
+            <div className="w-1/4 text-white font-semibold">vs</div>
+            <div className="w-1/4 truncate">
+                <span className={`${match.team2 === 'TBD' ? 'text-gray-500' : ''}`}>
+                {match.team2}
+                </span>
+            </div>
+            <div className="w-1/4 text-xs text-gray-400">
+                {match.time} · {match.date}
+            </div>
+            </div>
+        ))}
         </div>
 
-        {/* Semifinals */}
-        <div>
-        <h2 className="text-center mb-4 text-lg font-semibold">Semifinals</h2>
-        {fixtures.semifinals.map(renderMatch)}
-        </div>
-
-        {/* Finals */}
-        <div>
-        <h2 className="text-center mb-4 text-lg font-semibold">Finals</h2>
-        {fixtures.finals.map(renderMatch)}
-        </div>
     </div>
     </div>
 );
 };
 
-export default FixturesPage;
+export default Fixture;
