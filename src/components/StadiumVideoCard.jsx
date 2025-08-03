@@ -17,9 +17,14 @@ return (
         />
 
         <div className="absolute inset-0 flex flex-col justify-center items-center z-10">
-        <h1 className="text-white text-6xl md:text-7xl font-extrabold tracking-wider uppercase text-center drop-shadow-xl leading-[1.1]">
+        <h1
+            className="text-white text-[70px] md:text-[110px] uppercase text-center drop-shadow-xl leading-[0.8] tracking-tight"
+            style={{ fontFamily: "'Anton', sans-serif" }}
+            >
             Bat’s Up
         </h1>
+
+
         </div>
 
         <div className="absolute bottom-10 left-6 right-6 bg-gradient-to-br from-black/10 to-black/5 backdrop-blur-xl text-white px-6 py-5 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xl z-10">

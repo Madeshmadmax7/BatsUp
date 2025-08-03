@@ -15,7 +15,6 @@ const navLinks = [
     { name: 'Home', to: '/' },
     { name: 'Tournaments', to: '/tournaments' },
     { name: 'Fixtures', to: '/fixtures' },
-    { name: 'Tickets', to: '/tickets' },
     { name: 'About', to: '/about' },
 ];
 
