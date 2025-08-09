@@ -8,6 +8,8 @@ import Tournament from './components/Tournament';
 import About from './page/AboutPage';
 import FixturesPage from './page/FixturesPage';
 import Loader from './components/Loader';
+import Login from './components/Login';
+import AdminTeams from './components/AdminTeams';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -29,6 +31,8 @@ function App() {
         <Route path="/tournaments" element={<Tournament />} />
         <Route path="/fixtures" element={<FixturesPage />} />
         <Route path="/about" element={<About />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/manage" element={<AdminTeams />} />
       </Routes>
       <FooterPage />
     </Router>

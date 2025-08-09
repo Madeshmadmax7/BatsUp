@@ -1,9 +1,13 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaSearch } from 'react-icons/fa';
 import flag from '../assets/flag-india.png';
 import logo2 from '../assets/logo-2.png';
+import { useState } from 'react';
 
 const Navbar = () => {
+const navigate = useNavigate();
+const [menuOpen, setMenuOpen] = useState(false);
+
 const navItemClasses = `
     relative text-white cursor-pointer px-1
     before:content-[''] before:absolute before:w-full before:h-[2px] before:bg-white before:top-[-6px] before:left-0 before:scale-x-0 before:origin-left before:transition-transform before:duration-300 
@@ -16,34 +20,87 @@ const navLinks = [
     { name: 'Tournaments', to: '/tournaments' },
     { name: 'Fixtures', to: '/fixtures' },
     { name: 'About', to: '/about' },
+    { name: 'Manage', to: '/manage' },
 ];
 
 return (
+    <>
     <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-[95%] rounded-2xl bg-black/30 shadow-none px-6 md:px-10 py-3 flex justify-between items-center text-white">
-    <img src={logo2} alt="NEO CRICKET" className="h-12 w-auto object-contain filter-none shadow-none outline-none" />
+        
+        <img
+        src={logo2}
+        alt="NEO CRICKET"
+        className="h-12 w-auto object-contain cursor-pointer md:cursor-default"
+        onClick={() => {
+            if (window.innerWidth < 768) {
+            setMenuOpen(true);
+            }
+        }}
+        />
 
-    <ul className="hidden md:flex gap-6 text-sm font-medium">
+        <ul className="hidden md:flex gap-6 text-sm font-medium">
         {navLinks.map(({ name, to }) => (
-        <li key={name} className={navItemClasses}>
-            <Link to={to} className="focus:outline-none focus:ring-0">{name}</Link>
-        </li>
+            <li key={name} className={navItemClasses}>
+            <Link to={to} className="focus:outline-none">{name}</Link>
+            </li>
         ))}
-    </ul>
+        </ul>
 
-    <div className="flex items-center gap-4">
-        <FaSearch className="text-white text-lg cursor-pointer hover:text-gray-300 focus:outline-none focus:ring-0 filter-none" />
+        <div className="flex items-center gap-4">
+        <FaSearch className="text-white text-lg cursor-pointer hover:text-gray-300" />
 
-        <button className="bg-white text-black font-semibold px-4 py-1.5 rounded-full hover:bg-gray-100 transition focus:outline-none focus:ring-0 shadow-none">
-        Login
+        <button
+            onClick={() => navigate('/login')}
+            className="bg-white text-black font-semibold px-4 py-1.5 rounded-full hover:bg-gray-100 transition"
+        >
+            Login
         </button>
 
         <img
-        src={flag}
-        alt="flag"
-        className="w-10 h-10 rounded-full object-cover shadow-none ring-0 outline-none filter-none"
+            src={flag}
+            alt="flag"
+            className="w-10 h-10 rounded-full object-cover"
         />
-    </div>
+        </div>
     </nav>
+
+    <div
+        className={`fixed top-0 left-0 h-full w-64 bg-black/90 z-[999] transform transition-transform duration-300 md:hidden ${
+        menuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+    >
+        <div className="flex justify-between items-center p-4 border-b border-gray-700">
+        <img src={logo2} alt="Logo" className="h-10" />
+        <button
+            className="text-white text-2xl"
+            onClick={() => setMenuOpen(false)}
+        >
+            ✕
+        </button>
+        </div>
+
+        <ul className="flex flex-col gap-6 p-6 text-white">
+        {navLinks.map(({ name, to }) => (
+            <li key={name}>
+            <Link
+                to={to}
+                onClick={() => setMenuOpen(false)}
+                className="text-lg font-medium hover:text-gray-300"
+            >
+                {name}
+            </Link>
+            </li>
+        ))}
+        </ul>
+    </div>
+
+    {menuOpen && (
+        <div
+        className="fixed inset-0 bg-black/50 z-[998] md:hidden"
+        onClick={() => setMenuOpen(false)}
+        />
+    )}
+    </>
 );
 };
 
