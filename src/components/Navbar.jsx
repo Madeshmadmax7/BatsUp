@@ -21,6 +21,7 @@ const navLinks = [
     { name: 'Fixtures', to: '/fixtures' },
     { name: 'About', to: '/about' },
     { name: 'Manage', to: '/manage' },
+    { name: 'Registered', to: '/registered' },
 ];
 
 return (

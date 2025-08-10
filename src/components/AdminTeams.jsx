@@ -2,128 +2,131 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 
 export default function AdminTeams() {
-const teams = [
+const tournaments = [
     {
     id: 1,
-    name: "Warriors",
-    players: [
-        { id: 101, name: "John" },
-        { id: 102, name: "David" },
-        { id: 103, name: "Mark" },
+    name: "Summer Cup 2025",
+    teams: [
+        {
+        id: 101,
+        name: "Warriors",
+        players: [
+            { id: 1, name: "John" },
+            { id: 2, name: "David" },
+            { id: 3, name: "Mark" },
+        ],
+        },
+        {
+        id: 102,
+        name: "Strikers",
+        players: [
+            { id: 4, name: "Alex" },
+            { id: 5, name: "Mike" },
+        ],
+        },
     ],
     },
     {
     id: 2,
-    name: "Strikers",
-    players: [
-        { id: 201, name: "Alex" },
-        { id: 202, name: "Mike" },
-    ],
-    },
-    {
-    id: 3,
-    name: "Titans",
-    players: [
-        { id: 301, name: "Sam" },
-        { id: 302, name: "Chris" },
+    name: "Winter League 2025",
+    teams: [
+        {
+        id: 201,
+        name: "Titans",
+        players: [
+            { id: 6, name: "Sam" },
+            { id: 7, name: "Chris" },
+        ],
+        },
+        {
+        id: 202,
+        name: "Dragons",
+        players: [
+            { id: 8, name: "Nancy" },
+            { id: 9, name: "Liam" },
+        ],
+        },
     ],
     },
 ];
 
 const [selectedTeam, setSelectedTeam] = useState(null);
-const [captainId, setCaptainId] = useState(null);
 
-const handleDelete = (id) => {
-    console.log("Delete team with id:", id);
-};
-
-const handleSetCaptain = () => {
-    console.log(
-    `Captain for team ${selectedTeam.name} is player ID: ${captainId}`
-    );
-    setSelectedTeam(null);
-    setCaptainId(null);
+const handleDelete = (teamId) => {
+    alert(`Delete team with id: ${teamId} (handle this logic)`);
 };
 
 return (
-    <div className="p-6">
-    <h1 className="text-3xl font-bold text-violet-600 mb-6">
-        Team Management
+    <div className="p-6 max-w-7xl mx-auto bg-gray-900 min-h-screen">
+    <h1 className="text-3xl font-bold text-white mt-10 mb-8">
+        Team Management by Tournament
     </h1>
 
-    {/* TEAM LIST */}
-    {!selectedTeam && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {teams.map((team) => (
-            <div
-            key={team.id}
-            className="relative bg-white shadow-md rounded-xl p-4 cursor-pointer hover:shadow-lg transition"
-            onClick={() => setSelectedTeam(team)}
-            >
-            <button
-                onClick={(e) => {
-                e.stopPropagation();
-                handleDelete(team.id);
-                }}
-                className="absolute top-3 right-3 text-red-500 hover:text-red-700"
-            >
-                <Trash2 size={20} />
-            </button>
-
-            <h2 className="text-xl font-semibold text-black">
-                {team.name}
-            </h2>
-            <p className="text-gray-700">
-                Players: {team.players.length} / 15
-            </p>
-            </div>
-        ))}
-        </div>
-    )}
-
-    {/* TEAM DETAILS */}
-    {selectedTeam && (
-        <div className="bg-white p-6 rounded-xl shadow-md">
-        <h2 className="text-2xl font-semibold text-violet-600 mb-4">
-            {selectedTeam.name} - Players
+    {tournaments.map((tournament) => (
+        <section key={tournament.id} className="mb-10">
+        <h2 className="text-2xl font-semibold mb-4 text-white border-b border-gray-600 pb-1">
+            {tournament.name}
         </h2>
 
-        <ul className="space-y-2">
-            {selectedTeam.players.map((player) => (
-            <li
-                key={player.id}
-                className="flex items-center justify-between border p-2 rounded-lg"
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {tournament.teams.map((team) => (
+            <div
+                key={team.id}
+                className="relative cursor-pointer bg-gray-800 text-white shadow-md rounded-lg p-4 hover:shadow-lg transition duration-200 border border-gray-700"
+                onClick={() => setSelectedTeam(team)}
             >
-                <span>{player.name}</span>
-                <input
-                type="radio"
-                name="captain"
-                value={player.id}
-                checked={captainId === player.id}
-                onChange={() => setCaptainId(player.id)}
-                />
-            </li>
-            ))}
-        </ul>
+                {/* Delete button */}
+                <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(team.id);
+                }}
+                className="absolute top-2 right-2 text-gray-300 hover:text-red-500 transition-colors"
+                title="Delete Team"
+                >
+                <Trash2 size={16} />
+                </button>
 
-        <div className="mt-4 flex gap-3">
-            <button
-            onClick={handleSetCaptain}
-            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
-            disabled={!captainId}
-            >
-            Save Captain
-            </button>
-            <button
-            onClick={() => {
-                setSelectedTeam(null);
-                setCaptainId(null);
-            }}
-            className="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500"
-            >
-            Back
-            </button>
+                <h3 className="text-lg font-semibold mb-1">{team.name}</h3>
+                <p className="inline-block bg-gray-700 text-white px-2 py-0.5 rounded text-xs font-medium select-none">
+                Players: {team.players.length} / 15
+                </p>
+            </div>
+            ))}
         </div>
+        </section>
+    ))}
+
+    {selectedTeam && (
+        <div
+            className="fixed inset-0 flex justify-center items-center z-50"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
+            onClick={() => setSelectedTeam(null)}
+        >
+            <div
+            className="bg-gray-800 rounded-lg p-6 max-w-md w-full shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+            >
+            <h3 className="text-2xl font-semibold mb-4 text-white">
+                {selectedTeam.name} - Players
+            </h3>
+            <ul className="space-y-2 max-h-60 overflow-y-auto text-gray-300">
+                {selectedTeam.players.map((player) => (
+                <li
+                    key={player.id}
+                    className="border-b border-gray-700 pb-2"
+                >
+                    {player.name}
+                </li>
+                ))}
+            </ul>
+            <button
+                onClick={() => setSelectedTeam(null)}
+                className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+            >
+                Close
+            </button>
+            </div>
         </div>
     )}
     </div>

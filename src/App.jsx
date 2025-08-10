@@ -10,6 +10,7 @@ import FixturesPage from './page/FixturesPage';
 import Loader from './components/Loader';
 import Login from './components/Login';
 import AdminTeams from './components/AdminTeams';
+import Registered from './components/Registered';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -33,6 +34,7 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/login" element={<Login />} />
         <Route path="/manage" element={<AdminTeams />} />
+        <Route path="/registered" element={<Registered />} />
       </Routes>
       <FooterPage />
     </Router>

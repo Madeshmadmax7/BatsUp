@@ -4,6 +4,7 @@ const Form = ({ tournament, onClose, onRegister }) => {
 const [players, setPlayers] = useState([]);
 const [jerseyNumbers, setJerseyNumbers] = useState([]);
 const [teamName, setTeamName] = useState("");
+const [teamPassword, setTeamPassword] = useState(""); // NEW STATE
 const [phone, setPhone] = useState("");
 const [location, setLocation] = useState("");
 const [logo, setLogo] = useState(null);
@@ -27,6 +28,7 @@ const handleDeletePlayer = (index) => {
 const handleSubmit = () => {
     if (
     !teamName ||
+    !teamPassword || // check for password
     players.some((p) => !p) ||
     jerseyNumbers.some((j) => !j) ||
     !phone ||
@@ -34,7 +36,7 @@ const handleSubmit = () => {
     !logo
     ) {
     alert(
-        "Please complete all fields for all players and upload a team logo."
+        "Please complete all fields for all players, enter a team password, and upload a team logo."
     );
     return;
     }
@@ -84,6 +86,16 @@ return (
                 placeholder="Team Name"
                 className="w-full border border-gray-300 focus:ring-2 focus:ring-yellow-400 focus:outline-none p-3 rounded-lg"
             />
+
+            {/* NEW FIELD: Team Password */}
+            <input
+                type="password"
+                value={teamPassword}
+                onChange={(e) => setTeamPassword(e.target.value)}
+                placeholder="Team Password"
+                className="w-full border border-gray-300 p-3 rounded-lg"
+            />
+
             <input
                 type="text"
                 value={phone}
