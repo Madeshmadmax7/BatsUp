@@ -5,7 +5,7 @@ import matchBg from "../assets/pic-2.jpg";
 const Footer = () => {
 return (
     <div className="bg-black text-white">
-    <footer className="px-6 py-16">
+        <footer className="px-6 py-16">
         <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-8 mb-16">
         <div
             className="rounded-3xl overflow-hidden relative h-[320px] bg-cover bg-center group"

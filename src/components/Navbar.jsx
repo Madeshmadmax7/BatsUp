@@ -3,10 +3,13 @@ import { FaSearch } from 'react-icons/fa';
 import flag from '../assets/flag-india.png';
 import logo2 from '../assets/logo-2.png';
 import { useState } from 'react';
+import { useAuth } from '../AuthContext';
 
 const Navbar = () => {
 const navigate = useNavigate();
 const [menuOpen, setMenuOpen] = useState(false);
+
+const { role } = useAuth();
 
 const navItemClasses = `
     relative text-white cursor-pointer px-1
@@ -15,19 +18,39 @@ const navItemClasses = `
     hover:before:scale-x-100 hover:after:scale-x-100
 `;
 
-const navLinks = [
+const navLinksForPlayer = [
     { name: 'Home', to: '/' },
     { name: 'Tournaments', to: '/tournaments' },
     { name: 'Fixtures', to: '/fixtures' },
     { name: 'About', to: '/about' },
-    { name: 'Manage', to: '/manage' },
     { name: 'Registered', to: '/registered' },
 ];
 
+const navLinksForFan = [
+    { name: 'Home', to: '/' },
+    { name: 'Teams', to: '/teams' },
+    { name: 'Newsletter', to: '/newsletter' },
+    { name: 'Matches', to: '/matches' },
+    { name: 'About', to: '/about' },
+];
+
+const navLinksForUser = [
+    { name: 'Home', to: '/' },
+    { name: 'Tournaments', to: '/tournaments' },
+    { name: 'Newsletter', to: '/newsletter' },
+    { name: 'About', to: '/about' },
+];
+
+let navLinks;
+
+if (role === 'PLAYER') navLinks = navLinksForPlayer;
+else if (role === 'FAN') navLinks = navLinksForFan;
+else navLinks = navLinksForUser;
+
 return (
     <>
-    <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-[95%] rounded-2xl bg-black/30 shadow-none px-6 md:px-10 py-3 flex justify-between items-center text-white">
-        
+    <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-[95%] rounded-2xl bg-black/30 px-6 md:px-10 py-3 flex justify-between items-center text-white">
+
         <img
         src={logo2}
         alt="NEO CRICKET"
@@ -65,6 +88,7 @@ return (
         </div>
     </nav>
 
+    {/* Mobile menu */}
     <div
         className={`fixed top-0 left-0 h-full w-64 bg-black/90 z-[999] transform transition-transform duration-300 md:hidden ${
         menuOpen ? 'translate-x-0' : '-translate-x-full'

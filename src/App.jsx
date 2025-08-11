@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import './App.css';
+
 import Navbar from './components/Navbar';
 import FooterPage from './page/FooterPage';
 import Home from './page/HomePage';
@@ -11,6 +12,9 @@ import Loader from './components/Loader';
 import Login from './components/Login';
 import AdminTeams from './components/AdminTeams';
 import Registered from './components/Registered';
+
+import { AuthProvider } from './AuthContext';
+import NewsLetter from './components/NewsLetter';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -25,19 +29,22 @@ function App() {
   }
 
   return (
-    <Router>
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/tournaments" element={<Tournament />} />
-        <Route path="/fixtures" element={<FixturesPage />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/manage" element={<AdminTeams />} />
-        <Route path="/registered" element={<Registered />} />
-      </Routes>
-      <FooterPage />
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/tournaments" element={<Tournament />} />
+          <Route path="/fixtures" element={<FixturesPage />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/manage" element={<AdminTeams />} />
+          <Route path="/registered" element={<Registered />} />
+          <Route path="/newsletter" element={<NewsLetter />} />
+        </Routes>
+        <FooterPage />
+      </Router>
+    </AuthProvider>
   );
 }
 

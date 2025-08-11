@@ -1,14 +1,25 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Img from "../assets/logo-black.png";
+import { useAuth } from '../AuthContext';
 
 function Login() {
+const { setRole } = useAuth();
+
 const [isRegister, setIsRegister] = useState(false);
-const [role, setRole] = useState("");
+const [role, setLocalRole] = useState("");
 const [teamAction, setTeamAction] = useState("");
 const [teamName, setTeamName] = useState("");
 const [teamPassword, setTeamPassword] = useState("");
 const [showPlayerDetails, setShowPlayerDetails] = useState(false);
+
+const [playerName, setPlayerName] = useState("");
+const [playerCity, setPlayerCity] = useState("");
+const [phone, setPhone] = useState("");
+const [playedIn, setPlayedIn] = useState("");
+const [playerType, setPlayerType] = useState("");
+const [lastPlayedFor, setLastPlayedFor] = useState("");
+
 const navigate = useNavigate();
 
 useEffect(() => {
@@ -23,6 +34,7 @@ useEffect(() => {
 
 const handleSubmit = (e) => {
     e.preventDefault();
+
     const data = {
     email: e.target.email?.value ?? "",
     password: e.target.password?.value ?? "",
@@ -31,21 +43,46 @@ const handleSubmit = (e) => {
         teamAction,
         teamName,
         teamPassword,
+        playerName,
+        playerCity,
+        phone,
+        playedIn,
+        playerType,
+        lastPlayedFor,
+    }),
+    ...(teamAction === "join" && {
+        playerName,
+        playerCity,
+        phone,
+        playedIn,
+        playerType,
+        lastPlayedFor,
+        teamName,
+        teamPassword,
     }),
     };
+
     console.log("Form data:", data);
+
+    // Set the global role in context if role is present (login or register)
+    if (isRegister || (!isRegister && data.role)) {
+    setRole(data.role || null);
+    }
+
     if (teamAction === "join") {
     alert("Join Team submitted (UI only). See console for data.");
     } else if (isRegister) {
     alert("Register submitted (UI only). See console for data.");
+    // Example: After registration, redirect to tournaments page
+    // navigate('/tournaments');
     } else {
     alert("Login submitted (UI only). See console for data.");
+    // Example: After login, redirect to home or dashboard
+    // navigate('/');
     }
 };
 
-// Only "join" triggers slide out and wide form, "register" ('Register Tournament') does not
-const leftPanelWidth =
-    teamAction === "join" ? "w-1/4" : "w-1/2";
+const leftPanelWidth = teamAction === "join" ? "w-1/4" : "w-1/2";
 const rightPanelClass =
     teamAction === "join"
     ? "w-full md:w-3/4 rounded-none"
@@ -72,9 +109,7 @@ return (
         className={`flex flex-col justify-center items-center bg-white p-6 shadow-lg mt-[72px] md:mt-0 transition-all duration-500 ease-in-out ${rightPanelClass}`}
     >
         <div
-        className={`w-full ${
-            teamAction === "join" ? "max-w-4xl" : "max-w-xs"
-        }`}
+        className={`w-full ${teamAction === "join" ? "max-w-4xl" : "max-w-xs"}`}
         >
         {/* Header */}
         <div className="mb-2">
@@ -90,7 +125,6 @@ return (
             {/* Top actions when registering as PLAYER */}
             {isRegister && role === "PLAYER" && (
             <div className="flex gap-2 mb-3">
-                {/* Register Tournament now does NOT trigger slide out ("register" action has no effect on width) */}
                 <button
                 type="button"
                 onClick={() => {
@@ -136,9 +170,7 @@ return (
             </button>
             <div className="flex items-center my-3">
                 <hr className="flex-grow border-t border-gray-300" />
-                <span className="mx-2 text-black text-xs">
-                or Sign in with Email
-                </span>
+                <span className="mx-2 text-black text-xs">or Sign in with Email</span>
                 <hr className="flex-grow border-t border-gray-300" />
             </div>
             </>
@@ -180,7 +212,7 @@ return (
                     <select
                         value={role}
                         onChange={(e) => {
-                        setRole(e.target.value);
+                        setLocalRole(e.target.value);
                         setTeamAction("");
                         }}
                         className="w-full appearance-none border text-black border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#7B1E7A] text-sm bg-white"
@@ -204,6 +236,81 @@ return (
                         />
                     </svg>
                     </div>
+
+                    {/* Player details for register form */}
+                    {role === "PLAYER" && (
+                    <>
+                        <label className="block mb-1 text-xs text-black">
+                        Player Name
+                        </label>
+                        <input
+                        type="text"
+                        value={playerName}
+                        onChange={(e) => setPlayerName(e.target.value)}
+                        className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+                        placeholder="Your full name"
+                        />
+
+                        <label className="block mb-1 text-xs text-black">
+                        Player City
+                        </label>
+                        <input
+                        type="text"
+                        value={playerCity}
+                        onChange={(e) => setPlayerCity(e.target.value)}
+                        className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+                        placeholder="City"
+                        />
+
+                        <label className="block mb-1 text-xs text-black">
+                        Phone
+                        </label>
+                        <input
+                        type="text"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+                        placeholder="Phone number"
+                        />
+
+                        <label className="block mb-1 text-xs text-black">
+                        Played In
+                        </label>
+                        <input
+                        type="text"
+                        value={playedIn}
+                        onChange={(e) => setPlayedIn(e.target.value)}
+                        className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+                        placeholder="Played in"
+                        />
+
+                        <label className="block mb-1 text-xs text-black">
+                        Player Type
+                        </label>
+                        <select
+                        value={playerType}
+                        onChange={(e) => setPlayerType(e.target.value)}
+                        className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+                        >
+                        <option value="">Select Type</option>
+                        <option value="Batsman">Batsman</option>
+                        <option value="Bowler">Bowler</option>
+                        <option value="All-Rounder">All-Rounder</option>
+                        <option value="Wicket Keeper">Wicket Keeper</option>
+                        </select>
+
+                        <label className="block mb-1 text-xs text-black">
+                        Last Played For
+                        </label>
+                        <input
+                        type="text"
+                        value={lastPlayedFor}
+                        onChange={(e) => setLastPlayedFor(e.target.value)}
+                        className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+                        placeholder="Last played for"
+                        />
+                    </>
+                    )}
                 </>
                 )}
             </>
@@ -221,9 +328,7 @@ return (
                     className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
                 />
 
-                <label className="block mb-1 text-xs text-black">
-                    Password
-                </label>
+                <label className="block mb-1 text-xs text-black">Password</label>
                 <input
                     name="password"
                     type="password"
@@ -233,10 +338,7 @@ return (
 
                 <div className="flex items-center mb-3">
                     <input type="checkbox" id="remember" className="mr-2" />
-                    <label
-                    htmlFor="remember"
-                    className="text-xs text-black"
-                    >
+                    <label htmlFor="remember" className="text-xs text-black">
                     Remember Me
                     </label>
                 </div>
@@ -263,38 +365,65 @@ return (
                 }`}
                 aria-hidden={!showPlayerDetails}
                 >
-                <label className="block mb-1 text-xs text-black">
-                    Player Name
-                </label>
+                <label className="block mb-1 text-xs text-black">Player Name</label>
                 <input
                     type="text"
+                    value={playerName}
+                    onChange={(e) => setPlayerName(e.target.value)}
                     className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
                     placeholder="Your full name"
                 />
 
-                <label className="block mb-1 text-xs text-black">
-                    Player Type
-                </label>
-                <select className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm">
-                    <option value="">Select Type</option>
-                    <option>Batsman</option>
-                    <option>Bowler</option>
-                    <option>All-Rounder</option>
-                    <option>Wicket Keeper</option>
-                </select>
-
-                <label className="block mb-1 text-xs text-black">
-                    Jersey Number
-                </label>
+                <label className="block mb-1 text-xs text-black">Player City</label>
                 <input
-                    type="number"
+                    type="text"
+                    value={playerCity}
+                    onChange={(e) => setPlayerCity(e.target.value)}
                     className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
-                    placeholder="e.g. 10"
+                    placeholder="City"
                 />
 
-                <label className="block mb-1 text-xs text-black">
-                    Team Name
-                </label>
+                <label className="block mb-1 text-xs text-black">Phone</label>
+                <input
+                    type="text"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+                    placeholder="Phone number"
+                />
+
+                <label className="block mb-1 text-xs text-black">Played In</label>
+                <input
+                    type="text"
+                    value={playedIn}
+                    onChange={(e) => setPlayedIn(e.target.value)}
+                    className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+                    placeholder="Played in"
+                />
+
+                <label className="block mb-1 text-xs text-black">Player Type</label>
+                <select
+                    value={playerType}
+                    onChange={(e) => setPlayerType(e.target.value)}
+                    className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+                >
+                    <option value="">Select Type</option>
+                    <option value="Batsman">Batsman</option>
+                    <option value="Bowler">Bowler</option>
+                    <option value="All-Rounder">All-Rounder</option>
+                    <option value="Wicket Keeper">Wicket Keeper</option>
+                </select>
+
+                <label className="block mb-1 text-xs text-black">Last Played For</label>
+                <input
+                    type="text"
+                    value={lastPlayedFor}
+                    onChange={(e) => setLastPlayedFor(e.target.value)}
+                    className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+                    placeholder="Last played for"
+                />
+
+                <label className="block mb-1 text-xs text-black">Team Name</label>
                 <input
                     type="text"
                     value={teamName}
@@ -303,9 +432,7 @@ return (
                     placeholder="Team you want to join"
                 />
 
-                <label className="block mb-1 text-xs text-black">
-                    Team Password
-                </label>
+                <label className="block mb-1 text-xs text-black">Team Password</label>
                 <input
                     type="password"
                     value={teamPassword}
