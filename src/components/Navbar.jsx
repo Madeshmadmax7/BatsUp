@@ -48,6 +48,7 @@ const navLinksForAdmin = [
     { name: 'Home', to: '/' },
     { name: 'Tournaments', to: '/tournaments' },
     { name: 'Scores', to: '/scores' },
+    { name: 'Fixtures', to: '/fixtures' },
     { name: 'Newsletter', to: '/newsletter' },
     { name: 'Manage', to: '/manage' },
     { name: 'About', to: '/about' },

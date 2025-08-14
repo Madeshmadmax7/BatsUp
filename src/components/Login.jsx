@@ -202,7 +202,6 @@ return (
 
             {teamAction === "join" && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Left side login */}
                 <div>
                 <label className="block mb-1 text-xs text-black">Email</label>
                 <input name="email" type="email" required
