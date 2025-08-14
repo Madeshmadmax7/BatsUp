@@ -15,6 +15,7 @@ import Registered from './components/Registered';
 
 import { AuthProvider } from './AuthContext';
 import NewsLetter from './components/NewsLetter';
+import LiveScores from './components/LiveScores';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -41,6 +42,7 @@ function App() {
           <Route path="/manage" element={<AdminTeams />} />
           <Route path="/registered" element={<Registered />} />
           <Route path="/newsletter" element={<NewsLetter />} />
+          <Route path="/scores" element={<LiveScores />} />
         </Routes>
         <FooterPage />
       </Router>

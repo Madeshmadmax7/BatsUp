@@ -22,8 +22,9 @@ const navLinksForPlayer = [
     { name: 'Home', to: '/' },
     { name: 'Tournaments', to: '/tournaments' },
     { name: 'Fixtures', to: '/fixtures' },
-    { name: 'About', to: '/about' },
+    { name: 'Scores', to: '/scores' },
     { name: 'Registered', to: '/registered' },
+    { name: 'About', to: '/about' },
 ];
 
 const navLinksForFan = [
@@ -31,13 +32,24 @@ const navLinksForFan = [
     { name: 'Teams', to: '/teams' },
     { name: 'Newsletter', to: '/newsletter' },
     { name: 'Matches', to: '/matches' },
+    { name: 'Scores', to: '/scores' },
     { name: 'About', to: '/about' },
 ];
 
 const navLinksForUser = [
     { name: 'Home', to: '/' },
     { name: 'Tournaments', to: '/tournaments' },
+    { name: 'Scores', to: '/scores' },
     { name: 'Newsletter', to: '/newsletter' },
+    { name: 'About', to: '/about' },
+];
+
+const navLinksForAdmin = [
+    { name: 'Home', to: '/' },
+    { name: 'Tournaments', to: '/tournaments' },
+    { name: 'Scores', to: '/scores' },
+    { name: 'Newsletter', to: '/newsletter' },
+    { name: 'Manage', to: '/manage' },
     { name: 'About', to: '/about' },
 ];
 
@@ -45,6 +57,7 @@ let navLinks;
 
 if (role === 'PLAYER') navLinks = navLinksForPlayer;
 else if (role === 'FAN') navLinks = navLinksForFan;
+else if( role === 'ADMIN') navLinks = navLinksForAdmin;
 else navLinks = navLinksForUser;
 
 return (
