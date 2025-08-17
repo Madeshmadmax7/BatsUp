@@ -106,7 +106,6 @@ function AdminPanel() {
             body: JSON.stringify(newsletterForm),
         }).then(() => {
             setNewsletterForm({ subject: "", summary: "", imageLink: "", teamId: "" });
-            // reload newsletters
             fetch(`${API_BASE}/api/news/get`)
                 .then(res => res.ok ? res.json() : [])
                 .then(data => { setNewsletterList(Array.isArray(data) ? data : []); });

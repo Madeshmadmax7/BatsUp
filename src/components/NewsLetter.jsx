@@ -1,31 +1,82 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-function NewsLetter() {
+function NewsLetter({ fanId }) {
     const [newsData, setNewsData] = useState([]);
     const [teams, setTeams] = useState([]);
     const [favorites, setFavorites] = useState([]);
+    const [fanInfo, setFanInfo] = useState(null);
 
     useEffect(() => {
-        // Fetch newsletters
-        axios.get("http://localhost:8080/api/newsletters")
-            .then((res) => setNewsData(res.data))
-            .catch(() => setNewsData([]));
-
-        // Fetch teams (for favorite selection)
         axios.get("http://localhost:8080/api/team/get")
-            .then((res) => setTeams(res.data))
-            .catch(() => setTeams([]));
+        .then((res) => setTeams(res.data))
+        .catch(() => setTeams([]));
     }, []);
 
-    const toggleFavorite = (team) => {
-        setFavorites((prev) =>
-            prev.some((f) => f.id === team.id)
-                ? prev.filter((f) => f.id !== team.id)
-                : [...prev, team]
-        );
+    const fetchFanInfo = () => {
+        if (fanId && teams.length > 0) {
+        axios.get(`http://localhost:8080/api/fan/get/${fanId}`)
+            .then((res) => {
+            setFanInfo(res.data);
+            const followedTeamIds = res.data.followedTeamIds || [];
+            const favs = teams.filter(team => followedTeamIds.includes(team.id));
+            setFavorites(favs);
+            })
+            .catch(() => {
+            setFavorites([]);
+            setFanInfo(null);
+            });
+        }
     };
 
+    useEffect(() => {
+        fetchFanInfo();
+    }, [fanId, teams]);
+
+    useEffect(() => {
+        if (fanId) {
+        axios.get(`http://localhost:8080/api/news/fan/${fanId}`)
+            .then((res) => {
+            const fanNews = res.data;
+            axios.get("http://localhost:8080/api/news/get")
+                .then((res2) => {
+                const all = res2.data;
+                const combined = [
+                    ...fanNews,
+                    ...all.filter((n) => !fanNews.some((f) => f.id === n.id))
+                ];
+                setNewsData(combined);
+                });
+            })
+            .catch(() => setNewsData([]));
+        } else {
+        axios.get("http://localhost:8080/api/news/get")
+            .then((res) => setNewsData(res.data))
+            .catch(() => setNewsData([]));
+        }
+    }, [fanId]);
+
+    const toggleFavorite = (team) => {
+        const alreadyFav = favorites.some((f) => f.id === team.id);
+        const updated = alreadyFav
+        ? favorites.filter((f) => f.id !== team.id)
+        : [...favorites, team];
+
+        setFavorites(updated);
+
+        if (fanId && fanInfo) {
+        axios.put(`http://localhost:8080/api/fan/update/${fanId}`, {
+            id: fanId,
+            name: fanInfo.name,
+            email: fanInfo.email,
+            bookedMatchIds: fanInfo.bookedMatchIds || [],
+            followedTeamIds: updated.map((t) => t.id),
+        })
+        .then(fetchFanInfo)
+        .catch((e) => console.error("Failed to update fan teams", e));
+        }
+    };
+    
     return (
         <div className="max-w-6xl mx-auto px-6 mt-24 text-white">
             {/* Favorite Picks */}
@@ -125,7 +176,6 @@ function NewsLetter() {
 }
 
 export default NewsLetter;
-
 
 
 

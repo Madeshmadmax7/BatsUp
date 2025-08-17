@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import axios from "axios";
 
 const Form = ({ tournament, onClose, onRegister }) => {
-    const [players, setPlayers] = useState([]);
-    const [jerseyNumbers, setJerseyNumbers] = useState([]);
+    const [players, setPlayers] = useState([""]); // start with 1 player
+    const [jerseyNumbers, setJerseyNumbers] = useState([""]);
     const [teamName, setTeamName] = useState("");
     const [teamPassword, setTeamPassword] = useState("");
     const [phone, setPhone] = useState("");
     const [location, setLocation] = useState("");
-    const [logo, setLogo] = useState(null);
+    const [logoLink, setLogoLink] = useState("");
 
     const handleAddPlayer = () => {
         if (players.length < 15) {
@@ -27,6 +27,7 @@ const Form = ({ tournament, onClose, onRegister }) => {
     };
 
     const handleSubmit = async () => {
+        // simple validation
         if (
             !teamName ||
             !teamPassword ||
@@ -34,45 +35,39 @@ const Form = ({ tournament, onClose, onRegister }) => {
             jerseyNumbers.some((j) => !j) ||
             !phone ||
             !location ||
-            !logo
+            !logoLink
         ) {
-            alert(
-                "Please complete all fields for all players, enter a team password, and upload a team logo."
-            );
+            alert("Please fill all fields and provide logo URL.");
             return;
         }
 
-        // Prepare form data for file upload
-        const formData = new FormData();
-        formData.append("teamName", teamName);
-        formData.append("teamPassword", teamPassword);
-        formData.append("phone", phone);
-        formData.append("location", location);
-        formData.append("logo", logo);
-
-        formData.append("tournamentId", tournament.id || ""); // Add tournamentId if using DB object
-        formData.append("tournamentName", tournament.tournamentName || tournament.title);
-        formData.append("tournamentDate", tournament.startDate || tournament.date);
-        formData.append("tournamentType", tournament.matchType || tournament.type);
-
-        // Add players and jerseyNumbers
-        formData.append("players", JSON.stringify(players));
-        formData.append("jerseyNumbers", JSON.stringify(jerseyNumbers));
+        // create object instead of FormData
+        const payload = {
+            teamName,
+            teamPassword,
+            phoneNumber: phone,
+            location,
+            logo: logoLink,
+            tournamentId: tournament.id,
+            tournamentName: tournament.tournamentName || tournament.title,
+            tournamentDate: tournament.startDate || tournament.date,
+            tournamentType: tournament.matchType || tournament.type,
+            players: players.map((name, i) => ({
+                playerName: name,
+                playerJersey: jerseyNumbers[i],
+            })),
+        };
 
         try {
-            await axios.post("http://localhost:8080/api/tournaments/create", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
-
-            alert(
-                `Team '${teamName}' successfully registered for ${tournament.tournamentName || tournament.title
-                }`
+            await axios.post(
+                "http://localhost:8080/api/tournaments/create",
+                payload
             );
+            alert(`Team '${teamName}' successfully registered!`);
             if (onRegister) onRegister();
             onClose();
         } catch (err) {
+            console.error(err);
             alert("Registration failed. Please try again!");
         }
     };
@@ -105,15 +100,15 @@ const Form = ({ tournament, onClose, onRegister }) => {
                                 {tournament.description}
                             </p>
                         </div>
+
                         <div className="space-y-4">
                             <input
                                 type="text"
                                 value={teamName}
                                 onChange={(e) => setTeamName(e.target.value)}
                                 placeholder="Team Name"
-                                className="w-full border border-gray-300 focus:ring-2 focus:ring-yellow-400 focus:outline-none p-3 rounded-lg"
+                                className="w-full border border-gray-300 p-3 rounded-lg"
                             />
-
                             <input
                                 type="password"
                                 value={teamPassword}
@@ -121,7 +116,6 @@ const Form = ({ tournament, onClose, onRegister }) => {
                                 placeholder="Team Password"
                                 className="w-full border border-gray-300 p-3 rounded-lg"
                             />
-
                             <input
                                 type="text"
                                 value={phone}
@@ -137,14 +131,12 @@ const Form = ({ tournament, onClose, onRegister }) => {
                                 className="w-full border border-gray-300 p-3 rounded-lg"
                             />
                             <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => setLogo(e.target.files[0])}
-                                className="w-full border border-gray-300 p-3 rounded-lg bg-white"
+                                type="text"
+                                value={logoLink}
+                                onChange={(e) => setLogoLink(e.target.value)}
+                                placeholder="Team Logo URL"
+                                className="w-full border border-gray-300 p-3 rounded-lg"
                             />
-                            <p className="text-sm text-gray-500 italic">
-                                Upload your team logo (image file)
-                            </p>
 
                             <h4 className="text-lg font-semibold text-gray-700 mt-6">
                                 Player Details
@@ -207,7 +199,6 @@ const Form = ({ tournament, onClose, onRegister }) => {
 };
 
 export default Form;
-
 
 
 
