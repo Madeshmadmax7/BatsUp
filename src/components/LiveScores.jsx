@@ -3,10 +3,7 @@ import axios from "axios";
 
 function ScorecardPopup({ open, onClose, team }) {
     if (!open || !team) return null;
-    const { players } = team;
-
-    const batsmen = players.filter((p) => p.playerType === "Batsman" || p.playerType === "All-rounder");
-    const bowlers = players.filter((p) => p.playerType === "Bowler" || p.playerType === "All-rounder");
+    const { name, batting, bowling } = team;
 
     return (
         <div
@@ -24,53 +21,47 @@ function ScorecardPopup({ open, onClose, team }) {
                 >
                     ×
                 </button>
-                <h2 className="text-2xl font-bold mb-4">{team.teamName} – Scorecard</h2>
+                <h2 className="text-2xl font-bold mb-4">{name} – Scorecard</h2>
 
+                {/* Batting */}
                 <h3 className="text-lg text-amber-300 font-semibold mb-1">Batting</h3>
                 <table className="w-full mb-4 text-sm">
                     <thead className="border-b border-gray-600">
                         <tr>
                             <th className="text-left py-1 px-2">Player</th>
                             <th className="text-right px-2">R</th>
-                            <th className="text-right px-2">B</th>
-                            <th className="text-right px-2">4s</th>
-                            <th className="text-right px-2">6s</th>
-                            <th className="text-right px-2">SR</th>
+                            <th className="text-right px-2">W</th>
+                            <th className="text-right px-2">C</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {batsmen.map((p, i) => (
+                        {batting.map((p, i) => (
                             <tr key={i} className="hover:bg-[#23232a] transition">
-                                <td className="py-1 px-2">{p.playerName}</td>
+                                <td className="py-1 px-2">{p.name}</td>
                                 <td className="text-right px-2">{p.runs}</td>
-                                <td className="text-right px-2">{p.balls}</td>
-                                <td className="text-right px-2">{p.fours}</td>
-                                <td className="text-right px-2">{p.sixes}</td>
-                                <td className="text-right px-2">{p.sr}</td>
+                                <td className="text-right px-2">{p.wickets}</td>
+                                <td className="text-right px-2">{p.catches}</td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
 
+                {/* Bowling */}
                 <h3 className="text-lg text-amber-300 font-semibold mb-1">Bowling</h3>
                 <table className="w-full text-sm">
                     <thead className="border-b border-gray-600">
                         <tr>
                             <th className="text-left py-1 px-2">Player</th>
-                            <th className="text-right px-2">O</th>
-                            <th className="text-right px-2">R</th>
                             <th className="text-right px-2">W</th>
-                            <th className="text-right px-2">Econ</th>
+                            <th className="text-right px-2">R</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {bowlers.map((p, i) => (
+                        {bowling.map((b, i) => (
                             <tr key={i} className="hover:bg-[#23232a] transition">
-                                <td className="py-1 px-2">{p.playerName}</td>
-                                <td className="text-right px-2">{p.balls /* overs in balls */}</td>
-                                <td className="text-right px-2">{p.runs}</td>
-                                <td className="text-right px-2">{p.wickets}</td>
-                                <td className="text-right px-2">{(p.runs && p.balls) ? (p.runs / (p.balls / 6)).toFixed(2) : "–"}</td>
+                                <td className="py-1 px-2">{b.name}</td>
+                                <td className="text-right px-2">{b.wickets}</td>
+                                <td className="text-right px-2">{b.runs}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -81,86 +72,90 @@ function ScorecardPopup({ open, onClose, team }) {
 }
 
 export default function LiveScores() {
-    const [matches, setMatches] = useState([]);
-    const [popupTeamId, setPopupTeamId] = useState(null);
-    const [teamsData, setTeamsData] = useState({});
-    const [selectedTeam, setSelectedTeam] = useState(null);
+    const [scorecards, setScorecards] = useState([]);
+    const [popupTeam, setPopupTeam] = useState(null);
 
     useEffect(() => {
-        axios.get("http://localhost:8080/api/match/get").then((res) => {
-            setMatches(res.data);
-        });
+        fetchScorecards();
     }, []);
 
-    useEffect(() => {
-        if (matches.length) {
-            const fetchTeams = async () => {
-                let tempTeams = {};
-                for (const match of matches) {
-                    const homeRes = await axios.get(`http://localhost:8080/api/team/get/${match.homeTeamId}`);
-                    const awayRes = await axios.get(`http://localhost:8080/api/team/get/${match.awayTeamId}`);
-                    tempTeams[match.homeTeamId] = homeRes.data;
-                    tempTeams[match.awayTeamId] = awayRes.data;
+    const fetchScorecards = async () => {
+        try {
+            const res = await axios.get("http://localhost:8080/api/scorecard/all");
+
+            // 🔹 Group by team
+            const teamsMap = {};
+            res.data.forEach((s) => {
+                if (!teamsMap[s.teamId]) {
+                    teamsMap[s.teamId] = {
+                        id: s.teamId,
+                        name: s.teamName,
+                        totalRuns: 0,
+                        totalWickets: 0,
+                        batting: [],
+                        bowling: [],
+                    };
                 }
-                setTeamsData(tempTeams);
-            };
-            fetchTeams();
+                teamsMap[s.teamId].totalRuns += s.runs;
+                teamsMap[s.teamId].totalWickets += s.wickets;
+                teamsMap[s.teamId].batting.push({
+                    name: s.playerName,
+                    runs: s.runs,
+                    wickets: s.wickets,
+                    catches: s.catches,
+                });
+                teamsMap[s.teamId].bowling.push({
+                    name: s.playerName,
+                    wickets: s.wickets,
+                    runs: s.runs,
+                });
+            });
+
+            setScorecards(Object.values(teamsMap));
+        } catch (err) {
+            console.error("Error fetching scorecards", err);
         }
-    }, [matches]);
+    };
 
     return (
         <div className="bg-black px-4 md:px-10 py-10 min-h-screen">
             <div className="max-w-7xl mx-auto">
-                <div className="flex items-center justify-between mb-8">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-white">Live Scores</h1>
-                </div>
-                {matches.map((match) => (
-                    <section key={match.id} className="mb-10">
-                        <h2 className="text-xl font-semibold mb-4 text-amber-400">
-                            {match.type} - {match.location} - {match.date}
-                        </h2>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {[match.homeTeamId, match.awayTeamId].map((teamId) => {
-                                const team = teamsData[teamId];
-                                if (!team) return null;
-                                return (
-                                    <div
-                                        key={team.id}
-                                        className="bg-[#18181b] rounded-lg shadow hover:shadow-xl transition flex flex-col items-center p-3 min-h-[160px]"
-                                    >
-                                        <div
-                                            className="w-14 h-14 bg-cover bg-center rounded-full mb-2"
-                                            style={{ backgroundImage: `url(${team.logo})` }}
-                                        />
-                                        <h3 className="text-base font-bold text-white">{team.teamName}</h3>
-                                        <div className="text-xs text-gray-300">
-                                            <span className="font-extrabold text-yellow-300">{match.scoreDetail?.runs || "–"}/{match.scoreDetail?.wickets || "–"}</span>
-                                            <span className="ml-2">({match.scoreDetail?.wickets || "–"} wkts)</span>
-                                        </div>
-                                        <button
-                                            className="mt-4 text-[13px] text-amber-400 font-semibold px-3 py-1 rounded-full border border-amber-400 hover:bg-amber-400 hover:text-black transition"
-                                            onClick={() => {
-                                                setPopupTeamId(team.id);
-                                                setSelectedTeam(team);
-                                            }}
-                                        >
-                                            View Details →
-                                        </button>
-                                    </div>
-                                );
-                            })}
+                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-8">
+                    Live Scores
+                </h1>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {scorecards.map((team) => (
+                        <div
+                            key={team.id}
+                            className="bg-[#18181b] rounded-lg shadow hover:shadow-xl transition flex flex-col items-center p-3 min-h-[160px]"
+                        >
+                            <h3 className="text-base font-bold text-white">{team.name}</h3>
+                            <div className="text-xs text-gray-300 mt-1">
+                                <span className="font-extrabold text-yellow-300">
+                                    {team.totalRuns}/{team.totalWickets}
+                                </span>
+                            </div>
+                            <button
+                                className="mt-4 text-[13px] text-amber-400 font-semibold px-3 py-1 rounded-full border border-amber-400 hover:bg-amber-400 hover:text-black transition"
+                                onClick={() => setPopupTeam(team)}
+                            >
+                                View Details →
+                            </button>
                         </div>
-                    </section>
-                ))}
+                    ))}
+                </div>
+
                 <ScorecardPopup
-                    open={!!popupTeamId}
-                    onClose={() => setPopupTeamId(null)}
-                    team={selectedTeam}
+                    open={!!popupTeam}
+                    onClose={() => setPopupTeam(null)}
+                    team={popupTeam}
                 />
             </div>
         </div>
     );
 }
+
 
 
 // import React, { useState } from "react";

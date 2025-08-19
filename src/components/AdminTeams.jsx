@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2 } from "lucide-react";
+import { Trash2, Plus } from "lucide-react";
 
 const API_BASE = "http://localhost:8080";
 
@@ -20,8 +20,8 @@ function AdminPanel() {
         subject: "",
         summary: "",
         imageLink: "",
-        tournamentId: "",   // Added tournamentId
-        teamName: "",       // Changed from teamId input to name selection
+        tournamentId: "",
+        teamName: "",
         content: ""
     });
     const [loadingNews, setLoadingNews] = useState(false);
@@ -35,7 +35,10 @@ function AdminPanel() {
         image: "",
     });
 
-    // Fetch all tournaments on mount
+    const [scorecards, setScorecards] = useState([]);
+    const [loadingScorecards, setLoadingScorecards] = useState(false);
+    const [managingTeamId, setManagingTeamId] = useState(null);
+
     useEffect(() => {
         setLoadingTournaments(true);
         fetch(`${API_BASE}/api/tournaments/get`)
@@ -84,6 +87,22 @@ function AdminPanel() {
             });
     }, [teams]);
 
+    // === NEW: fetch scorecards (all) ===
+    const refreshScorecards = () => {
+        setLoadingScorecards(true);
+        fetch(`${API_BASE}/api/scorecard/all`)
+            .then(res => res.ok ? res.json() : [])
+            .then(data => {
+                setScorecards(Array.isArray(data) ? data : []);
+                setLoadingScorecards(false);
+            })
+            .catch(() => {
+                setScorecards([]);
+                setLoadingScorecards(false);
+            });
+    };
+    useEffect(refreshScorecards, []);
+
     // Newsletter handlers
     const refreshNewsletters = () => {
         setLoadingNews(true);
@@ -102,10 +121,6 @@ function AdminPanel() {
 
     const addNewsletter = (e) => {
         e.preventDefault();
-
-        // Validate tournamentId is selected if you want to enforce it; else send empty string or null
-
-        // Submit newsletterForm as JSON to backend including tournamentId and teamName
         fetch(`${API_BASE}/api/newsletter/create`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -138,6 +153,8 @@ function AdminPanel() {
                 fetch(`${API_BASE}/api/player/all`)
                     .then(res => res.ok ? res.json() : [])
                     .then(data => setAllPlayers(Array.isArray(data) ? data : []));
+                // also refresh scorecards since team removed
+                refreshScorecards();
             });
     };
 
@@ -171,6 +188,74 @@ function AdminPanel() {
     // Get players of a team
     const getPlayersOfTeam = (teamId) =>
         allPlayers.filter(player => player.teamId === teamId);
+
+    // === NEW: Helpers for scorecards ===
+
+    // Team totals (sum of all player entries for that team)
+    const getTeamTotals = (teamId) => {
+        const entries = scorecards.filter(s => Number(s.teamId) === Number(teamId));
+        const runs = entries.reduce((acc, e) => acc + (Number(e.runs) || 0), 0);
+        const wickets = entries.reduce((acc, e) => acc + (Number(e.wickets) || 0), 0);
+        return { runs, wickets };
+    };
+
+    // Create an empty score-entry for a player under a team
+    const addPlayerScoreEntry = async ({ teamId, playerId, roundId = null }) => {
+        const payload = {
+            runs: 0,
+            wickets: 0,
+            catches: 0,
+            playerId,
+            teamId,
+            roundId
+        };
+        await fetch(`${API_BASE}/api/scorecard/create`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        refreshScorecards();
+    };
+
+    const updateScoreEntry = async (id, patch) => {
+        const current = scorecards.find(s => s.id === id);
+        if (!current) return;
+        const dto = {
+            id,
+            runs: patch.runs ?? current.runs,
+            wickets: patch.wickets ?? current.wickets,
+            catches: patch.catches ?? current.catches,
+            playerId: patch.playerId ?? current.playerId,
+            teamId: patch.teamId ?? current.teamId,
+            roundId: patch.roundId ?? current.roundId
+        };
+        await fetch(`${API_BASE}/api/scorecard/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(dto)
+        });
+        refreshScorecards();
+    };
+
+    const deleteScoreEntry = async (id) => {
+        await fetch(`${API_BASE}/api/scorecard/${id}`, { method: "DELETE" });
+        refreshScorecards();
+    };
+
+    const openManageTeam = (teamId) => setManagingTeamId(teamId);
+    const closeManageTeam = () => setManagingTeamId(null);
+
+    const managingTeam = managingTeamId
+        ? teams.find(t => t.id === managingTeamId)
+        : null;
+
+    const managingTeamPlayers = managingTeam
+        ? getPlayersOfTeam(managingTeam.id)
+        : [];
+
+    const managingTeamEntries = managingTeam
+        ? scorecards.filter(s => Number(s.teamId) === Number(managingTeam.id))
+        : [];
 
     return (
         <div className="p-6 max-w-7xl mx-auto bg-gray-900 min-h-screen text-white space-y-16">
@@ -292,6 +377,56 @@ function AdminPanel() {
                 )}
             </section>
 
+            {/* === NEW: SCORECARD MANAGEMENT === */}
+            <section>
+                <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">
+                    Score Management
+                </h2>
+
+                {!selectedTournament ? (
+                    <p className="text-gray-400 italic">Select a tournament to manage team scorecards.</p>
+                ) : loadingTeams || loadingPlayers || loadingScorecards ? (
+                    <p className="text-gray-300">Loading scorecards...</p>
+                ) : teams.length === 0 ? (
+                    <p className="text-gray-400 italic">No teams in this tournament.</p>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {teams.map(team => {
+                            const totals = getTeamTotals(team.id);
+                            return (
+                                <div key={team.id} className="bg-gray-800 p-4 rounded-lg border border-gray-700 flex flex-col">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h3 className="text-lg font-semibold">{team.name}</h3>
+                                        <button
+                                            className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm"
+                                            onClick={() => openManageTeam(team.id)}
+                                        >
+                                            Manage
+                                        </button>
+                                    </div>
+                                    <p className="text-sm text-gray-400 mb-1">Location: {team.location || "-"}</p>
+                                    <p className="text-sm text-gray-200">
+                                        Score: {totals.runs} / {totals.wickets}
+                                    </p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {managingTeam && (
+                    <ScoreManagementPopup
+                        team={managingTeam}
+                        players={managingTeamPlayers}
+                        entries={managingTeamEntries}
+                        onAddEntry={(playerId) => addPlayerScoreEntry({ teamId: managingTeam.id, playerId })}
+                        onUpdateEntry={updateScoreEntry}
+                        onDeleteEntry={deleteScoreEntry}
+                        onClose={closeManageTeam}
+                    />
+                )}
+            </section>
+
             {/* Newsletter Management */}
             <section>
                 <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">
@@ -331,7 +466,6 @@ function AdminPanel() {
                         onChange={e => {
                             const val = e.target.value;
                             handleNewsletterField("tournamentId", val === "" ? "" : Number(val));
-                            // Load teams for that tournament to update team selector
                             const selTournament = tournaments.find(t => t.id === Number(val));
                             setSelectedTournament(selTournament || null);
                         }}
@@ -480,6 +614,209 @@ function AdminPanel() {
 }
 
 export default AdminPanel;
+
+
+function ScoreManagementPopup({
+    team,
+    players,
+    entries,
+    onAddEntry,
+    onUpdateEntry,
+    onDeleteEntry,
+    onClose,
+}) {
+    if (!team) return null;
+
+    const totals = {
+        runs: entries.reduce((a, e) => a + (Number(e.runs) || 0), 0),
+        wickets: entries.reduce((a, e) => a + (Number(e.wickets) || 0), 0),
+        catches: entries.reduce((a, e) => a + (Number(e.catches) || 0), 0),
+    };
+
+    // players not yet added to this scorecard
+    const usedPlayerIds = new Set(entries.map(e => Number(e.playerId)));
+    const availablePlayers = players.filter(p => !usedPlayerIds.has(Number(p.id)));
+
+    const playerName = (playerId) => {
+        const p = players.find(pp => Number(pp.id) === Number(playerId));
+        return p ? (p.nickname || p.name || `#${p.jerseyNumber}`) : "Unknown";
+    };
+
+    return (
+        <div
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+            onClick={onClose}
+        >
+            <div
+                className="bg-gray-800 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-bold">{team.name} — Score Management</h2>
+                    <button onClick={onClose} className="text-sm bg-green-600 hover:bg-green-700 px-3 py-1 rounded">
+                        Save & Close
+                    </button>
+                </div>
+
+                {/* Quick totals */}
+                <div className="grid grid-cols-3 gap-3 mb-6">
+                    <div className="bg-gray-700 rounded p-3 text-center">
+                        <div className="text-xs text-gray-300">Team Runs</div>
+                        <div className="text-xl font-semibold">{totals.runs}</div>
+                    </div>
+                    <div className="bg-gray-700 rounded p-3 text-center">
+                        <div className="text-xs text-gray-300">Team Wickets</div>
+                        <div className="text-xl font-semibold">{totals.wickets}</div>
+                    </div>
+                    <div className="bg-gray-700 rounded p-3 text-center">
+                        <div className="text-xs text-gray-300">Team Catches</div>
+                        <div className="text-xl font-semibold">{totals.catches}</div>
+                    </div>
+                </div>
+
+                {/* Add player to scorecard */}
+                <div className="mb-6">
+                    <label className="block text-sm text-gray-300 mb-2">Add Player to Scorecard</label>
+                    <div className="flex gap-3">
+                        <select
+                            id="add-player-select"
+                            className="bg-gray-700 p-2 rounded text-white flex-1"
+                            defaultValue=""
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (!val) return;
+                                onAddEntry(Number(val));
+                                e.target.value = "";
+                            }}
+                        >
+                            <option value="">Select player...</option>
+                            {availablePlayers.map(p => (
+                                <option key={p.id} value={p.id}>
+                                    #{p.jerseyNumber} — {p.nickname || p.name}
+                                </option>
+                            ))}
+                        </select>
+                        <button
+                            onClick={() => {
+                                const sel = document.getElementById("add-player-select");
+                                if (sel && sel.value) {
+                                    onAddEntry(Number(sel.value));
+                                    sel.value = "";
+                                }
+                            }}
+                            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded"
+                        >
+                            <Plus size={16} /> Add
+                        </button>
+                    </div>
+                    {availablePlayers.length === 0 && (
+                        <p className="mt-2 text-xs text-gray-400">All team players already added to this scorecard.</p>
+                    )}
+                </div>
+
+                {/* Batting (Runs) */}
+                <div className="mb-8">
+                    <h3 className="text-lg font-semibold mb-2 text-white">Batting</h3>
+                    <table className="w-full text-sm text-white table-auto mb-3 border-collapse border border-gray-600">
+                        <thead>
+                            <tr>
+                                <th className="border border-gray-600 px-2 py-1 text-left">Player</th>
+                                <th className="border border-gray-600 px-2 py-1 text-center">Runs</th>
+                                <th className="border border-gray-600 px-2 py-1 text-center">Catches</th>
+                                <th className="border border-gray-600 px-2 py-1 text-center">Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {entries.length === 0 ? (
+                                <tr>
+                                    <td className="border border-gray-700 px-2 py-2 text-gray-400" colSpan={4}>
+                                        No players added yet.
+                                    </td>
+                                </tr>
+                            ) : (
+                                entries.map((e) => (
+                                    <tr key={e.id}>
+                                        <td className="border border-gray-700 px-2 py-1">{playerName(e.playerId)}</td>
+                                        <td className="border border-gray-700 px-2 py-1 text-center">
+                                            <input
+                                                type="number"
+                                                value={e.runs ?? 0}
+                                                onChange={(ev) => onUpdateEntry(e.id, { runs: Number(ev.target.value) })}
+                                                className="bg-gray-700 w-24 p-1 rounded text-white text-center"
+                                            />
+                                        </td>
+                                        <td className="border border-gray-700 px-2 py-1 text-center">
+                                            <input
+                                                type="number"
+                                                value={e.catches ?? 0}
+                                                onChange={(ev) => onUpdateEntry(e.id, { catches: Number(ev.target.value) })}
+                                                className="bg-gray-700 w-24 p-1 rounded text-white text-center"
+                                            />
+                                        </td>
+                                        <td className="border border-gray-700 px-2 py-1 text-center">
+                                            <button
+                                                className="text-red-500 hover:text-red-600"
+                                                title="Delete Player Entry"
+                                                onClick={() => onDeleteEntry(e.id)}
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Bowling (Wickets) */}
+                <div className="mb-2">
+                    <h3 className="text-lg font-semibold mb-2 text-white">Bowling</h3>
+                    <table className="w-full text-sm text-white table-auto mb-3 border-collapse border border-gray-600">
+                        <thead>
+                            <tr>
+                                <th className="border border-gray-600 px-2 py-1 text-left">Player</th>
+                                <th className="border border-gray-600 px-2 py-1 text-center">Wickets</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {entries.length === 0 ? (
+                                <tr>
+                                    <td className="border border-gray-700 px-2 py-2 text-gray-400" colSpan={2}>
+                                        No players added yet.
+                                    </td>
+                                </tr>
+                            ) : (
+                                entries.map((e) => (
+                                    <tr key={e.id}>
+                                        <td className="border border-gray-700 px-2 py-1">{playerName(e.playerId)}</td>
+                                        <td className="border border-gray-700 px-2 py-1 text-center">
+                                            <input
+                                                type="number"
+                                                value={e.wickets ?? 0}
+                                                onChange={(ev) => onUpdateEntry(e.id, { wickets: Number(ev.target.value) })}
+                                                className="bg-gray-700 w-24 p-1 rounded text-white text-center"
+                                            />
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="flex justify-end mt-6">
+                    <button
+                        onClick={onClose}
+                        className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
+                    >
+                        Save & Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 
 

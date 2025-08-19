@@ -1,43 +1,67 @@
-// Fixture.js
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 const Fixture = () => {
-    const [rounds, setRounds] = useState({});
+    const [tournaments, setTournaments] = useState([]);
+    const [selectedTournament, setSelectedTournament] = useState(null);
+    const [fixtureRounds, setFixtureRounds] = useState({});
     const [selectedRound, setSelectedRound] = useState("");
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
 
     useEffect(() => {
         setLoading(true);
-        axios.get("http://localhost:8080/api/round/with-matches")
-            .then((res) => {
-                const roundsData = {};
-                if (Array.isArray(res.data)) {
-                    res.data.forEach(round => {
-                        roundsData[round.roundName] = round.matches.map(match => ({
-                            date: match.date,
-                            team1: match.homeTeam || "TBD",
-                            team2: match.awayTeam || "TBD",
-                            time: match.time || "18:00"
-                        }));
-                    });
-                }
-                setRounds(roundsData);
-                const firstRound = Object.keys(roundsData)[0];
-                setSelectedRound(firstRound || "");
+        axios.get("http://localhost:8080/api/tournaments/all")
+            .then(res => {
+                setTournaments(Array.isArray(res.data) ? res.data : []);
                 setLoading(false);
-                setError("");
             })
             .catch(() => {
-                setRounds({});
-                setSelectedRound("");
+                setTournaments([]);
                 setLoading(false);
-                setError("Failed to load fixtures");
             });
     }, []);
 
-    const roundTabs = Object.keys(rounds);
+    useEffect(() => {
+        if (!selectedTournament) {
+            setFixtureRounds({});
+            setSelectedRound("");
+            return;
+        }
+        const teamNames = selectedTournament.teamNames && selectedTournament.teamNames.length > 0
+            ? selectedTournament.teamNames
+            : selectedTournament.teams?.map(t => t.name) || [];
+
+        if (teamNames.length === 0) {
+            setFixtureRounds({});
+            setSelectedRound("");
+            return;
+        }
+
+        let rounds = {};
+        const baseDate = new Date(selectedTournament.startDate);
+        let matchDates = [];
+        for (let i = 0; i < Math.ceil(teamNames.length / 2); i++) {
+            const d = new Date(baseDate);
+            d.setDate(baseDate.getDate() + i);
+            matchDates.push(d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }));
+        }
+        let round1 = [];
+        for (let i = 0, j = 0; i < teamNames.length; i += 2, j++) {
+            round1.push({
+                date: matchDates[j] || "",
+                team1: teamNames[i],
+                team2: teamNames[i + 1] || "TBD",
+                time: "3:00 PM"
+            });
+        }
+        rounds["Round 1"] = round1;
+
+        setFixtureRounds(rounds);
+        setSelectedRound("Round 1");
+    }, [selectedTournament]);
+
+
+    const roundTabs = Object.keys(fixtureRounds);
 
     if (loading) {
         return (
@@ -47,11 +71,38 @@ const Fixture = () => {
         );
     }
 
-    if (error || roundTabs.length === 0) {
+    if (!selectedTournament) {
         return (
-            <div className="min-h-screen bg-black text-white py-10 px-4 flex flex-col items-center justify-center">
-                <h2 className="text-2xl mb-4">No Fixtures Found</h2>
-                <p className="text-gray-400">{error || "No rounds or matches available."}</p>
+            <div className="min-h-screen bg-black text-white py-10 px-4 font-sans">
+                <div className="max-w-6xl mx-auto mt-16">
+                    <h1 className="text-4xl font-bold text-center mb-10">Cricket Fixtures</h1>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {tournaments.map((tournament) => (
+                            <div
+                                key={tournament.id}
+                                className="bg-white text-black rounded-2xl overflow-hidden shadow hover:scale-105 cursor-pointer transition-all duration-300"
+                                onClick={() => setSelectedTournament(tournament)}
+                            >
+                                <img
+                                    src={tournament.image}
+                                    alt={tournament.tournamentName}
+                                    className="h-48 w-full object-cover"
+                                />
+                                <div className="p-4">
+                                    <h2 className="text-xl font-semibold">{tournament.tournamentName}</h2>
+                                    <p className="text-sm text-gray-600">
+                                        {tournament.matchType} | {tournament.location} |{" "}
+                                        {new Date(tournament.startDate).toLocaleDateString("en-GB", {
+                                            day: "2-digit",
+                                            month: "short",
+                                            year: "numeric",
+                                        })}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }
@@ -59,25 +110,34 @@ const Fixture = () => {
     return (
         <div className="min-h-screen bg-black text-white py-10 px-4 font-sans">
             <div className="max-w-3xl mx-auto mt-15">
+                <button
+                    onClick={() => {
+                        setSelectedTournament(null);
+                        setFixtureRounds({});
+                        setSelectedRound("");
+                    }}
+                    className="mb-6 text-yellow-400 hover:underline"
+                >
+                    ← Back to Tournaments
+                </button>
                 <h1 className="text-3xl font-bold text-center mb-8">Cricket Fixtures</h1>
                 <div className="flex justify-center mb-6 border-b border-gray-700">
                     {roundTabs.map((round) => (
                         <button
                             key={round}
                             onClick={() => setSelectedRound(round)}
-                            className={`px-4 py-2 text-sm sm:text-base transition-all duration-200 border-b-2 ${
-                                selectedRound === round
+                            className={`px-4 py-2 text-sm sm:text-base transition-all duration-200 border-b-2 ${selectedRound === round
                                     ? "border-white text-white"
                                     : "border-transparent text-gray-400 hover:text-white"
-                            }`}
+                                }`}
                         >
                             {round}
                         </button>
                     ))}
                 </div>
                 <div className="space-y-3">
-                    {selectedRound && rounds[selectedRound]?.length > 0 ? (
-                        rounds[selectedRound].map((match, index) => (
+                    {selectedRound && fixtureRounds[selectedRound]?.length > 0 ? (
+                        fixtureRounds[selectedRound].map((match, index) => (
                             <div
                                 key={index}
                                 className="bg-[#1a1a1a] border border-gray-700 rounded-md px-4 py-3 text-sm sm:text-base flex justify-between items-center text-center"
@@ -94,7 +154,7 @@ const Fixture = () => {
                                     </span>
                                 </div>
                                 <div className="w-1/4 text-xs text-gray-400">
-                                    {match.time} · {match.date}
+                                    {match.time} {match.date && <>· {match.date}</>}
                                 </div>
                             </div>
                         ))
@@ -108,8 +168,6 @@ const Fixture = () => {
 };
 
 export default Fixture;
-
-
 
 // import React, { useState } from 'react';
 

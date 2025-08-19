@@ -4,7 +4,8 @@ import axios from "axios";
 const Matches = () => {
     const [tournaments, setTournaments] = useState([]);
     const [selectedTournament, setSelectedTournament] = useState(null);
-    const [selectedRound, setSelectedRound] = useState("Round 1");
+    const [fixtureRounds, setFixtureRounds] = useState({});
+    const [selectedRound, setSelectedRound] = useState("");
 
     useEffect(() => {
         axios.get("http://localhost:8080/api/tournaments/get")
@@ -18,6 +19,86 @@ const Matches = () => {
             .catch(() => setTournaments([]));
     }, []);
 
+    // Generate rounds when tournament is selected
+    useEffect(() => {
+        if (!selectedTournament) {
+            setFixtureRounds({});
+            setSelectedRound("");
+            return;
+        }
+
+        const teamNames =
+            selectedTournament.teamNames && selectedTournament.teamNames.length > 0
+                ? selectedTournament.teamNames
+                : selectedTournament.teams?.map(t => t.name) || [];
+
+        if (teamNames.length === 0) {
+            setFixtureRounds({});
+            setSelectedRound("");
+            return;
+        }
+
+        let rounds = {};
+        const baseDate = new Date(selectedTournament.startDate);
+        let matchDates = [];
+
+        // Dates for Round 1
+        for (let i = 0; i < Math.ceil(teamNames.length / 2); i++) {
+            const d = new Date(baseDate);
+            d.setDate(baseDate.getDate() + i);
+            matchDates.push(
+                d.toLocaleDateString("en-GB", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                })
+            );
+        }
+
+        // Round 1 → actual team vs team
+        let round1 = [];
+        for (let i = 0, j = 0; i < teamNames.length; i += 2, j++) {
+            round1.push({
+                date: matchDates[j] || "",
+                team1: teamNames[i],
+                team2: teamNames[i + 1] || "TBD",
+                time: "3:00 PM",
+            });
+        }
+        rounds["Round 1"] = round1;
+
+        // Round 2 → winners of round 1 (TBD vs TBD)
+        let round2 = [];
+        for (let i = 0; i < Math.ceil(round1.length / 2); i++) {
+            round2.push({
+                date: "", // can calculate later if needed
+                team1: "TBD",
+                team2: "TBD",
+                time: "TBD",
+            });
+        }
+        rounds["Round 2"] = round2;
+
+        // Round 3 (Final) → winner of round 2 (TBD vs TBD)
+        let round3 = [];
+        if (round2.length > 1) {
+            for (let i = 0; i < Math.ceil(round2.length / 2); i++) {
+                round3.push({
+                    date: "",
+                    team1: "TBD",
+                    team2: "TBD",
+                    time: "TBD",
+                });
+            }
+            rounds["Round 3"] = round3;
+        }
+
+        setFixtureRounds(rounds);
+        setSelectedRound("Round 1");
+    }, [selectedTournament]);
+
+    const roundTabs = Object.keys(fixtureRounds);
+
     return (
         <div className="min-h-screen bg-black text-white py-10 px-4 font-sans">
             <div className="max-w-6xl mx-auto mt-16">
@@ -29,20 +110,22 @@ const Matches = () => {
                             <div
                                 key={tournament.id}
                                 className="bg-white text-black rounded-2xl overflow-hidden shadow hover:scale-105 cursor-pointer transition-all duration-300"
-                                onClick={() => {
-                                    setSelectedTournament(tournament);
-                                    setSelectedRound("Round 1");
-                                }}
+                                onClick={() => setSelectedTournament(tournament)}
                             >
                                 <img
-                                    src={tournament.image}
-                                    alt={tournament.title}
+                                    src={tournament.image || "https://via.placeholder.com/300x200"}
+                                    alt={tournament.tournamentName}
                                     className="h-48 w-full object-cover"
                                 />
                                 <div className="p-4">
-                                    <h2 className="text-xl font-semibold">{tournament.title}</h2>
+                                    <h2 className="text-xl font-semibold">{tournament.tournamentName}</h2>
                                     <p className="text-sm text-gray-600">
-                                        {tournament.type} | {tournament.location} | {tournament.date}
+                                        {tournament.matchType || "N/A"} | {tournament.location} |{" "}
+                                        {new Date(tournament.startDate).toLocaleDateString("en-GB", {
+                                            day: "2-digit",
+                                            month: "short",
+                                            year: "numeric",
+                                        })}
                                     </p>
                                 </div>
                             </div>
@@ -57,26 +140,29 @@ const Matches = () => {
                             ← Back to Tournaments
                         </button>
 
-                        <h2 className="text-2xl font-bold mb-4">{selectedTournament.title} Fixtures</h2>
+                        <h2 className="text-2xl font-bold mb-4">{selectedTournament.tournamentName} Fixtures</h2>
 
+                        {/* Round Tabs */}
                         <div className="flex mb-6 border-b border-gray-700 overflow-x-auto">
-                            {selectedTournament.rounds && Object.keys(selectedTournament.rounds).map((round) => (
+                            {roundTabs.map((round) => (
                                 <button
                                     key={round}
                                     onClick={() => setSelectedRound(round)}
-                                    className={`px-4 py-2 text-sm whitespace-nowrap border-b-2 ${selectedRound === round
-                                        ? "border-white text-white"
-                                        : "border-transparent text-gray-400 hover:text-white"
-                                        }`}
+                                    className={`px-4 py-2 text-sm whitespace-nowrap border-b-2 ${
+                                        selectedRound === round
+                                            ? "border-white text-white"
+                                            : "border-transparent text-gray-400 hover:text-white"
+                                    }`}
                                 >
                                     {round}
                                 </button>
                             ))}
                         </div>
 
+                        {/* Matches */}
                         <div className="space-y-3">
-                            {selectedTournament.rounds && selectedTournament.rounds[selectedRound]?.length > 0 ? (
-                                selectedTournament.rounds[selectedRound].map((match, index) => (
+                            {selectedRound && fixtureRounds[selectedRound]?.length > 0 ? (
+                                fixtureRounds[selectedRound].map((match, index) => (
                                     <div
                                         key={index}
                                         className="bg-[#1a1a1a] border border-gray-700 rounded-md px-4 py-3 text-sm sm:text-base flex flex-col md:flex-row justify-between items-center text-center"
@@ -85,7 +171,7 @@ const Matches = () => {
                                         <div className="w-full md:w-1/4 font-semibold text-yellow-300">vs</div>
                                         <div className="w-full md:w-1/4 truncate font-medium">{match.team2}</div>
                                         <div className="w-full md:w-1/4 text-xs text-gray-400 mt-2 md:mt-0">
-                                            {match.time} · {match.date}
+                                            {match.time} {match.date && `· ${match.date}`}
                                         </div>
                                     </div>
                                 ))
