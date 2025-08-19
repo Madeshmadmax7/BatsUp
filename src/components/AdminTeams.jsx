@@ -1,35 +1,31 @@
-import React, { useEffect, useState } from "react";
-import { Trash2, Plus } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { Trash2 } from "lucide-react";
 
-// API base URL
 const API_BASE = "http://localhost:8080";
 
 function AdminPanel() {
-    // Tournaments
     const [tournaments, setTournaments] = useState([]);
     const [selectedTournament, setSelectedTournament] = useState(null);
     const [loadingTournaments, setLoadingTournaments] = useState(false);
 
-    // Teams for tournament
     const [teams, setTeams] = useState([]);
     const [loadingTeams, setLoadingTeams] = useState(false);
     const [selectedTeam, setSelectedTeam] = useState(null);
 
-    // Scorecards (per tournament, demo structure)
-    const [scoreCards, setScoreCards] = useState([]);
-    const [scoreModal, setScoreModal] = useState(null);
+    const [allPlayers, setAllPlayers] = useState([]);
+    const [loadingPlayers, setLoadingPlayers] = useState(false);
 
-    // Newsletter
     const [newsletterList, setNewsletterList] = useState([]);
     const [newsletterForm, setNewsletterForm] = useState({
         subject: "",
         summary: "",
         imageLink: "",
-        teamId: "",
+        tournamentId: "",   // Added tournamentId
+        teamName: "",       // Changed from teamId input to name selection
+        content: ""
     });
     const [loadingNews, setLoadingNews] = useState(false);
 
-    // Tournament Creation
     const [tournamentForm, setTournamentForm] = useState({
         tournamentName: "",
         startDate: "",
@@ -39,86 +35,118 @@ function AdminPanel() {
         image: "",
     });
 
-    // --- Fetch all tournaments on mount
+    // Fetch all tournaments on mount
     useEffect(() => {
         setLoadingTournaments(true);
         fetch(`${API_BASE}/api/tournaments/get`)
-            .then((res) => res.ok ? res.json() : [])
-            .then((data) => { setTournaments(Array.isArray(data) ? data : []); setLoadingTournaments(false); })
-            .catch(() => { setTournaments([]); setLoadingTournaments(false); });
+            .then(res => res.ok ? res.json() : [])
+            .then(data => {
+                setTournaments(Array.isArray(data) ? data : []);
+                setLoadingTournaments(false);
+            })
+            .catch(() => {
+                setTournaments([]);
+                setLoadingTournaments(false);
+            });
     }, []);
 
-    // --- Fetch registered teams when tournament is selected
+    // Fetch teams when tournament selected
     useEffect(() => {
-        if (!selectedTournament) { setTeams([]); setScoreCards([]); return; }
+        if (!selectedTournament) {
+            setTeams([]);
+            return;
+        }
         setLoadingTeams(true);
         fetch(`${API_BASE}/api/tournaments/${selectedTournament.id}/teams`)
-            .then((res) => res.ok ? res.json() : [])
-            .then((data) => { setTeams(Array.isArray(data) ? data : []); setLoadingTeams(false); })
-            .catch(() => { setTeams([]); setLoadingTeams(false); });
-
-        // Fetch Scorecards per tournament (demo: empty if not implemented)
-        fetch(`${API_BASE}/api/tournaments/${selectedTournament.id}/scorecards`)
             .then(res => res.ok ? res.json() : [])
-            .then(data => setScoreCards(Array.isArray(data) ? data : []))
-            .catch(() => setScoreCards([]));
+            .then(data => {
+                setTeams(Array.isArray(data) ? data : []);
+                setLoadingTeams(false);
+            })
+            .catch(() => {
+                setTeams([]);
+                setLoadingTeams(false);
+            });
     }, [selectedTournament]);
 
-    // --- Fetch newsletters
+    // Fetch all players on mount or after team changes
     useEffect(() => {
-        setLoadingNews(true);
-        fetch(`${API_BASE}/api/news/get`)
+        setLoadingPlayers(true);
+        fetch(`${API_BASE}/api/player/all`)
             .then(res => res.ok ? res.json() : [])
-            .then(data => { setNewsletterList(Array.isArray(data) ? data : []); setLoadingNews(false); })
-            .catch(() => { setNewsletterList([]); setLoadingNews(false); });
-    }, []);
+            .then(data => {
+                setAllPlayers(Array.isArray(data) ? data : []);
+                setLoadingPlayers(false);
+            })
+            .catch(() => {
+                setAllPlayers([]);
+                setLoadingPlayers(false);
+            });
+    }, [teams]);
 
-    // --- Team and Player Delete
-    const deleteTeam = (teamId) => {
-        fetch(`${API_BASE}/api/teams/${teamId}`, { method: "DELETE" })
-            .then(() => setTeams((prev) => prev.filter((t) => t.id !== teamId)));
-        if (selectedTeam?.id === teamId) setSelectedTeam(null);
+    // Newsletter handlers
+    const refreshNewsletters = () => {
+        setLoadingNews(true);
+        fetch(`${API_BASE}/api/newsletter/all`)
+            .then(res => res.ok ? res.json() : [])
+            .then(data => {
+                setNewsletterList(Array.isArray(data) ? data : []);
+                setLoadingNews(false);
+            })
+            .catch(() => {
+                setNewsletterList([]);
+                setLoadingNews(false);
+            });
     };
-    const deletePlayerFromTeam = (teamId, playerId) => {
-        fetch(`${API_BASE}/api/players/${playerId}`, { method: "DELETE" })
-            .then(() => setTeams((prev) =>
-                prev.map(team =>
-                    team.id === teamId
-                        ? { ...team, players: team.players.filter((p) => p.id !== playerId) }
-                        : team
-                )));
-    };
+    useEffect(refreshNewsletters, []);
 
-    // --- ScoreCard Delete (demo, adapt to API)
-    const deleteScoreCard = (scoreCardId) => {
-        setScoreCards(prev => prev.filter(sc => sc.id !== scoreCardId));
-        setScoreModal(null);
-    };
-
-    // --- Newsletter CRUD
-    const handleNewsletterField = (field, val) =>
-        setNewsletterForm(prev => ({ ...prev, [field]: val }));
     const addNewsletter = (e) => {
         e.preventDefault();
-        fetch(`${API_BASE}/api/news/create`, {
+
+        // Validate tournamentId is selected if you want to enforce it; else send empty string or null
+
+        // Submit newsletterForm as JSON to backend including tournamentId and teamName
+        fetch(`${API_BASE}/api/newsletter/create`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newsletterForm),
+            body: JSON.stringify(newsletterForm)
         }).then(() => {
-            setNewsletterForm({ subject: "", summary: "", imageLink: "", teamId: "" });
-            fetch(`${API_BASE}/api/news/get`)
-                .then(res => res.ok ? res.json() : [])
-                .then(data => { setNewsletterList(Array.isArray(data) ? data : []); });
+            setNewsletterForm({
+                subject: "",
+                summary: "",
+                imageLink: "",
+                tournamentId: "",
+                teamName: "",
+                content: ""
+            });
+            refreshNewsletters();
         });
     };
+
     const deleteNewsletter = (id) => {
-        fetch(`${API_BASE}/api/news/delete/${id}`, { method: "DELETE" })
-            .then(() => setNewsletterList(prev => prev.filter(n => n.id !== id)));
+        fetch(`${API_BASE}/api/newsletter/${id}`, { method: "DELETE" })
+            .then(refreshNewsletters);
     };
 
-    // --- Tournament CRUD
+    // Team handlers
+    const deleteTeam = (teamId) => {
+        if (!selectedTournament?.id) return;
+        fetch(`${API_BASE}/api/tournaments/${selectedTournament.id}/remove-team/${teamId}`, { method: "DELETE" })
+            .then(() => {
+                setTeams(prev => prev.filter(t => t.id !== teamId));
+                if (selectedTeam?.id === teamId) setSelectedTeam(null);
+                fetch(`${API_BASE}/api/player/all`)
+                    .then(res => res.ok ? res.json() : [])
+                    .then(data => setAllPlayers(Array.isArray(data) ? data : []));
+            });
+    };
+
+    const handleNewsletterField = (field, val) =>
+        setNewsletterForm(prev => ({ ...prev, [field]: val }));
+
     const handleTournamentField = (field, val) =>
         setTournamentForm(prev => ({ ...prev, [field]: val }));
+
     const addTournament = (e) => {
         e.preventDefault();
         fetch(`${API_BASE}/api/tournaments/create`, {
@@ -140,14 +168,19 @@ function AdminPanel() {
         });
     };
 
-    // --- UI Render ---
+    // Get players of a team
+    const getPlayersOfTeam = (teamId) =>
+        allPlayers.filter(player => player.teamId === teamId);
+
     return (
         <div className="p-6 max-w-7xl mx-auto bg-gray-900 min-h-screen text-white space-y-16">
             <h1 className="text-3xl font-bold mb-8">Admin Control Panel</h1>
 
             {/* Tournaments */}
             <section>
-                <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">Tournaments</h2>
+                <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">
+                    Tournaments
+                </h2>
                 {loadingTournaments ? (
                     <p className="text-gray-300">Loading tournaments...</p>
                 ) : (
@@ -155,11 +188,16 @@ function AdminPanel() {
                         {tournaments.length === 0 ? (
                             <p className="text-gray-400">No tournaments found.</p>
                         ) : (
-                            tournaments.map((t) => (
-                                <button key={t.id}
-                                    className={`px-4 py-2 rounded ${selectedTournament?.id === t.id ? "bg-yellow-500 text-black" : "bg-gray-700"}`}
-                                    onClick={() => setSelectedTournament(t)}>
-                                    {t.tournamentName || t.title}
+                            tournaments.map(t => (
+                                <button
+                                    key={t.id}
+                                    className={`px-4 py-2 rounded ${selectedTournament?.id === t.id
+                                        ? "bg-yellow-500 text-black"
+                                        : "bg-gray-700"
+                                        }`}
+                                    onClick={() => setSelectedTournament(t)}
+                                >
+                                    {t.tournamentName || t.title || t.name}
                                 </button>
                             ))
                         )}
@@ -170,8 +208,10 @@ function AdminPanel() {
             {/* Registered Teams */}
             <section>
                 <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">
-                    Registered Teams&nbsp;
-                    {selectedTournament ? `for "${selectedTournament.tournamentName || selectedTournament.title}"` : ""}
+                    Registered Teams{" "}
+                    {selectedTournament
+                        ? `for "${selectedTournament.tournamentName || selectedTournament.title || selectedTournament.name}"`
+                        : ""}
                 </h2>
                 {loadingTeams ? (
                     <p className="text-gray-300">Loading teams...</p>
@@ -180,8 +220,11 @@ function AdminPanel() {
                         {teams.length === 0 ? (
                             <p className="text-gray-400 italic col-span-full">No teams found.</p>
                         ) : (
-                            teams.map((team) => (
-                                <div key={team.id} className="bg-gray-800 p-4 rounded-lg border border-gray-700 relative">
+                            teams.map(team => (
+                                <div
+                                    key={team.id}
+                                    className="bg-gray-800 p-4 rounded-lg border border-gray-700 relative"
+                                >
                                     <button
                                         title="Delete Team"
                                         className="absolute top-2 right-2 text-gray-400 hover:text-red-600"
@@ -190,13 +233,17 @@ function AdminPanel() {
                                         <Trash2 size={18} />
                                     </button>
                                     <h3 className="text-lg font-semibold mb-1">{team.name}</h3>
-                                    <p className="text-sm text-gray-400">Location: {team.location}</p>
-                                    <p className="text-sm text-gray-400">Phone: {team.phone}</p>
-                                    <p className="text-sm text-gray-400 mb-2">Players: {team.players?.length || 0}</p>
+                                    <p className="text-sm text-gray-400">Location: {team.location || "N/A"}</p>
+                                    <p className="text-sm text-gray-400">Phone: {team.phone || "N/A"}</p>
+                                    <p className="text-sm text-gray-400 mb-2">
+                                        Players: {getPlayersOfTeam(team.id).length}
+                                    </p>
                                     <button
                                         onClick={() => setSelectedTeam(team)}
                                         className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm"
-                                    >View Players</button>
+                                    >
+                                        View Players
+                                    </button>
                                 </div>
                             ))
                         )}
@@ -211,76 +258,49 @@ function AdminPanel() {
                         className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
                         onClick={() => setSelectedTeam(null)}
                     >
-                        <div className="bg-gray-800 p-6 rounded-lg max-w-md w-full" onClick={e => e.stopPropagation()}>
+                        <div
+                            className="bg-gray-800 p-6 rounded-lg max-w-md w-full"
+                            onClick={e => e.stopPropagation()}
+                        >
                             <h3 className="text-2xl font-semibold mb-4">{selectedTeam.name} - Players</h3>
-                            {selectedTeam.players.length === 0 ? (
+                            {loadingPlayers ? (
+                                <p className="text-gray-300">Loading players...</p>
+                            ) : getPlayersOfTeam(selectedTeam.id).length === 0 ? (
                                 <p className="text-gray-400 italic mb-4">No players in this team.</p>
                             ) : (
                                 <ul className="space-y-2 max-h-60 overflow-y-auto">
-                                    {selectedTeam.players.map((player) => (
+                                    {getPlayersOfTeam(selectedTeam.id).map(player => (
                                         <li
                                             key={player.id}
                                             className="flex justify-between items-center border-b border-gray-700 pb-2"
                                         >
                                             <span>
-                                                #{player.jersey} - {player.name}
+                                                #{player.jerseyNumber} - {player.nickname}
                                             </span>
-                                            <button
-                                                onClick={() => deletePlayerFromTeam(selectedTeam.id, player.id)}
-                                                className="text-red-500 hover:text-red-600"
-                                                title="Delete Player"
-                                            ><Trash2 size={18} /></button>
                                         </li>
                                     ))}
                                 </ul>
                             )}
-                            <button onClick={() => setSelectedTeam(null)}
-                                className="mt-6 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">Close</button>
+                            <button
+                                onClick={() => setSelectedTeam(null)}
+                                className="mt-6 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+                            >
+                                Close
+                            </button>
                         </div>
                     </div>
                 )}
             </section>
 
-            {/* Score Management */}
+            {/* Newsletter Management */}
             <section>
-                <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">Score Management (per tournament)</h2>
-                <div className="flex flex-wrap gap-2 mb-6">
-                    <button
-                        onClick={() => setScoreModal({})}
-                        className="bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded text-white flex items-center gap-2"
-                    >
-                        <Plus size={16} /> Add Score Card
-                    </button>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {scoreCards.length === 0 ? (
-                        <p className="text-gray-400 italic">No score cards found for this tournament.</p>
-                    ) : (
-                        scoreCards.map((sc) => (
-                            <div key={sc.id} className="bg-gray-800 p-4 rounded-lg border border-gray-700 flex flex-col">
-                                <div className="flex justify-between items-center mb-3">
-                                    <h3 className="text-lg font-semibold">{sc.name}</h3>
-                                    <button
-                                        className="text-red-600 hover:text-red-800"
-                                        title="Delete Score Card"
-                                        onClick={() => deleteScoreCard(sc.id)}
-                                    ><Trash2 size={18} /></button>
-                                </div>
-                                <p className="text-sm text-gray-400 mb-1">Location: {sc.location || "-"}</p>
-                                <p className="text-sm text-gray-200">
-                                    Score: {sc.score || "-"} / {sc.wickets || "-"} &nbsp;&nbsp; Overs: {sc.overs || "-"}
-                                </p>
-                            </div>
-                        ))
-                    )}
-                </div>
-                {/* Modal for adding/editing score is left to implement as per exact requirements */}
-            </section>
-
-            {/* Newsletters */}
-            <section>
-                <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">Newsletter Management</h2>
-                <form onSubmit={addNewsletter} className="bg-gray-800 p-5 rounded-lg max-w-xl space-y-4">
+                <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">
+                    Newsletter Management
+                </h2>
+                <form
+                    onSubmit={addNewsletter}
+                    className="bg-gray-800 p-5 rounded-lg max-w-xl space-y-4"
+                >
                     <input
                         type="text"
                         placeholder="Subject *"
@@ -304,40 +324,103 @@ function AdminPanel() {
                         onChange={e => handleNewsletterField("imageLink", e.target.value)}
                         className="w-full bg-gray-700 px-3 py-2 rounded text-white"
                     />
-                    <input
-                        type="text"
-                        placeholder="Team ID (optional)"
-                        value={newsletterForm.teamId}
-                        onChange={e => handleNewsletterField("teamId", e.target.value)}
+
+                    {/* Tournament selector */}
+                    <select
+                        value={newsletterForm.tournamentId}
+                        onChange={e => {
+                            const val = e.target.value;
+                            handleNewsletterField("tournamentId", val === "" ? "" : Number(val));
+                            // Load teams for that tournament to update team selector
+                            const selTournament = tournaments.find(t => t.id === Number(val));
+                            setSelectedTournament(selTournament || null);
+                        }}
+                        className="w-full bg-gray-700 px-3 py-2 rounded text-white"
+                    >
+                        <option value="">Select Tournament (optional)</option>
+                        {tournaments.map(t => (
+                            <option key={t.id} value={t.id}>
+                                {t.tournamentName || t.title || t.name}
+                            </option>
+                        ))}
+                    </select>
+
+                    {/* Team selector based on selected tournament */}
+                    <select
+                        value={newsletterForm.teamName}
+                        onChange={e => handleNewsletterField("teamName", e.target.value)}
+                        className="w-full bg-gray-700 px-3 py-2 rounded text-white"
+                        disabled={!selectedTournament || teams.length === 0}
+                    >
+                        <option value="">Select Team (optional)</option>
+                        {teams.map(team => (
+                            <option key={team.id} value={team.name}>
+                                {team.name}
+                            </option>
+                        ))}
+                    </select>
+
+                    <textarea
+                        placeholder="Content *"
+                        value={newsletterForm.content}
+                        onChange={e => handleNewsletterField("content", e.target.value)}
+                        required
+                        rows={4}
                         className="w-full bg-gray-700 px-3 py-2 rounded text-white"
                     />
-                    <button type="submit" className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white">Publish News</button>
+                    <button
+                        type="submit"
+                        className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white"
+                    >
+                        Publish News
+                    </button>
                 </form>
                 <div className="mt-6 grid sm:grid-cols-2 md:grid-cols-3 gap-6">
                     {loadingNews ? (
                         <p className="text-gray-400 italic">Loading newsletters...</p>
                     ) : newsletterList.length === 0 ? (
                         <p className="text-gray-400 italic">No newsletters found.</p>
-                    ) : newsletterList.map((nw) => (
-                        <article key={nw.id} className="bg-white rounded-lg shadow-lg p-5 text-gray-900 relative">
-                            <button
-                                className="absolute top-2 right-2 text-red-600"
-                                onClick={() => deleteNewsletter(nw.id)}
-                                title="Delete Newsletter"
-                            ><Trash2 size={18} /></button>
-                            {nw.imageLink && <img src={nw.imageLink} alt={nw.subject} className="w-full h-40 object-cover rounded mb-4" />}
-                            <h3 className="text-xl font-semibold">{nw.subject}</h3>
-                            <p className="text-sm font-medium text-gray-600 mb-1">{nw.teamId}</p>
-                            <p className="mb-2">{nw.summary}</p>
-                        </article>
-                    ))}
+                    ) : (
+                        newsletterList.map(nw => (
+                            <article
+                                key={nw.id}
+                                className="bg-white rounded-lg shadow-lg p-5 text-gray-900 relative"
+                            >
+                                <button
+                                    className="absolute top-2 right-2 text-red-600"
+                                    onClick={() => deleteNewsletter(nw.id)}
+                                    title="Delete Newsletter"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                                {nw.imageLink && (
+                                    <img
+                                        src={nw.imageLink}
+                                        alt={nw.subject}
+                                        className="w-full h-40 object-cover rounded mb-4"
+                                    />
+                                )}
+                                <h3 className="text-xl font-semibold">{nw.subject}</h3>
+                                <p className="text-sm font-medium text-gray-600 mb-1">
+                                    Tournament ID: {nw.tournamentId || "N/A"} | Team: {nw.teamName || "N/A"}
+                                </p>
+                                <p className="mb-2">{nw.summary}</p>
+                                <p className="mb-2">{nw.content}</p>
+                            </article>
+                        ))
+                    )}
                 </div>
             </section>
 
-            {/* Tournament Create */}
+            {/* Tournament Create Form */}
             <section>
-                <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">Create Tournament</h2>
-                <form onSubmit={addTournament} className="bg-gray-800 p-5 rounded-lg max-w-xl space-y-4">
+                <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">
+                    Create Tournament
+                </h2>
+                <form
+                    onSubmit={addTournament}
+                    className="bg-gray-800 p-5 rounded-lg max-w-xl space-y-4"
+                >
                     <input
                         type="text"
                         placeholder="Title *"
@@ -384,7 +467,10 @@ function AdminPanel() {
                         onChange={e => handleTournamentField("image", e.target.value)}
                         className="w-full bg-gray-700 px-3 py-2 rounded text-white"
                     />
-                    <button type="submit" className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white">
+                    <button
+                        type="submit"
+                        className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white"
+                    >
                         Create Tournament
                     </button>
                 </form>
@@ -394,6 +480,7 @@ function AdminPanel() {
 }
 
 export default AdminPanel;
+
 
 
 // import React, { useState } from "react";

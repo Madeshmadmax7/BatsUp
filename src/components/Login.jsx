@@ -1,416 +1,320 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Img from "../assets/logo-black.png";
 import { useAuth } from '../AuthContext';
 
-// Player Details form component
-function PlayerDetailsForm({
-  playerName, setPlayerName,
-  playerCity, setPlayerCity,
-  phone, setPhone,
-  playedIn, setPlayedIn,
-  playerType, setPlayerType,
-  lastPlayedFor, setLastPlayedFor,
-  teamName, setTeamName,
-  teamPassword, setTeamPassword
-}) {
+// Player details form (used when role === "PLAYER")
+function PlayerDetailsForm({ data, setData }) {
   return (
     <>
       <label className="block mb-1 text-xs text-black">Player Name</label>
       <input
         type="text"
-        value={playerName}
-        onChange={e => setPlayerName(e.target.value)}
-        className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+        value={data.playerName || ""}
+        onChange={e => setData({ ...data, playerName: e.target.value })}
         placeholder="Your full name"
+        className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
       />
-
       <label className="block mb-1 text-xs text-black">Player City</label>
       <input
         type="text"
-        value={playerCity}
-        onChange={e => setPlayerCity(e.target.value)}
-        className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+        value={data.playerCity || ""}
+        onChange={e => setData({ ...data, playerCity: e.target.value })}
         placeholder="City"
+        className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
       />
-
       <label className="block mb-1 text-xs text-black">Phone</label>
       <input
         type="text"
-        value={phone}
-        onChange={e => setPhone(e.target.value)}
-        className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+        value={data.phone || ""}
+        onChange={e => setData({ ...data, phone: e.target.value })}
         placeholder="Phone number"
-      />
-
-      <label className="block mb-1 text-xs text-black">Played In</label>
-      <input
-        type="text"
-        value={playedIn}
-        onChange={e => setPlayedIn(e.target.value)}
         className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
-        placeholder="Played in"
       />
-
-      <label className="block mb-1 text-xs text-black">Player Type</label>
+      <label className="block mb-1 text-xs text-black">Player Role</label>
       <select
-        value={playerType}
-        onChange={e => setPlayerType(e.target.value)}
+        value={data.playerType || ""}
+        onChange={e => setData({ ...data, playerType: e.target.value })}
         className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
       >
-        <option value="">Select Type</option>
+        <option value="">Select Role</option>
         <option value="Batsman">Batsman</option>
         <option value="Bowler">Bowler</option>
         <option value="All-Rounder">All-Rounder</option>
         <option value="Wicket Keeper">Wicket Keeper</option>
       </select>
-
-      <label className="block mb-1 text-xs text-black">Last Played For</label>
-      <input
-        type="text"
-        value={lastPlayedFor}
-        onChange={e => setLastPlayedFor(e.target.value)}
-        className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
-        placeholder="Last played for"
-      />
-
       <label className="block mb-1 text-xs text-black">Team Name</label>
       <input
         type="text"
-        value={teamName}
-        onChange={e => setTeamName(e.target.value)}
+        value={data.teamName || ""}
+        onChange={e => setData({ ...data, teamName: e.target.value })}
+        placeholder="Team you want to join"
         className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
-        placeholder="Team you want to join/register"
       />
-
       <label className="block mb-1 text-xs text-black">Team Password</label>
       <input
         type="password"
-        value={teamPassword}
-        onChange={e => setTeamPassword(e.target.value)}
+        value={data.teamPassword || ""}
+        onChange={e => setData({ ...data, teamPassword: e.target.value })}
+        placeholder="Team password"
         className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-4 text-sm"
-        placeholder="Enter team password"
       />
     </>
   );
 }
 
-async function findTeamId(teamName, teamPassword) {
-  const response = await axios.get('http://localhost:8080/api/team/get');
-  const teams = response.data;
-  const team = teams.find(
-    t =>
-      t.teamName.toLowerCase() === teamName.toLowerCase() &&
-      t.teamPassword === teamPassword
+// Fan details form (used when role === "FAN")
+function FanDetailsForm({ data, setData }) {
+  return (
+    <>
+      <label className="block mb-1 text-xs text-black">Favorite Player Name</label>
+      <input
+        type="text"
+        value={data.favoritePlayer || ""}
+        onChange={e => setData({ ...data, favoritePlayer: e.target.value })}
+        placeholder="Favorite player's name"
+        className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+      />
+      <label className="block mb-1 text-xs text-black">Region</label>
+      <input
+        type="text"
+        value={data.region || ""}
+        onChange={e => setData({ ...data, region: e.target.value })}
+        placeholder="Your city or state"
+        className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+      />
+      {/* Add following if you want team/tournament following at registration */}
+      {/* 
+      <label className="block mb-1 text-xs text-black">Follow Team IDs (comma separated)</label>
+      <input
+        type="text"
+        value={data.followedTeamIds || ""}
+        onChange={e => setData({ ...data, followedTeamIds: e.target.value })}
+        placeholder="e.g. 1,3,7"
+        className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm"
+      />
+      */}
+    </>
   );
-  if (!team) throw new Error("Team not found or password incorrect");
+}
+
+// Player/Team helpers for player flow
+async function findTeamId(teamName, teamPassword) {
+  const { data: teams } = await axios.get('http://localhost:8080/api/team/all');
+  const team = teams.find(
+    t => t.name.toLowerCase() === teamName.toLowerCase() && t.password === teamPassword
+  );
+  if (!team) throw new Error('Team name or password is incorrect');
   return team.id;
 }
-
-// FAN Registration helper
-async function registerFan({ name, email, password, followedTeamIds }) {
-  await axios.post('http://localhost:8080/api/users/create', {
-    userName: name,
-    email,
-    password,
-    role: "FAN"
-  });
-  await axios.post('http://localhost:8080/api/fan/create', {
-    name,
-    email,
-    followedTeamIds: followedTeamIds || []
-  });
+async function findPlayerId(playerName, teamId) {
+  const { data: players } = await axios.get('http://localhost:8080/api/player/all');
+  const player = players.find(
+    p => p.nickname.toLowerCase() === playerName.toLowerCase() && p.teamId === teamId
+  );
+  return player ? player.id : null;
 }
-
-// PLAYER Registration helper
-async function registerPlayer({
-  playerName, email, password, teamName, teamPassword,
-  playerCity, phone, playedIn, playerType, lastPlayedFor
+async function registerOrUpdatePlayer({
+  playerName, email, password, teamName, teamPassword, playerCity, phone, playerType
 }) {
   const teamId = await findTeamId(teamName, teamPassword);
 
-  await axios.post('http://localhost:8080/api/users/create', {
-    userName: playerName,
+  // Register user
+  const { data: user } = await axios.post('http://localhost:8080/api/user/register', {
+    firstName: playerName,
     email,
     password,
-    role: "PLAYER"
-  });
+    roles: ['PLAYER']
+  }, { params: { password } });
+  const userId = user.id;
 
-  await axios.post(`http://localhost:8080/api/team/${teamId}/join?password=${teamPassword}`, {
-    playerName,
-    playerCity,
-    phone,
-    playedIn,
-    playerType,
-    lastPlayedFor,
-    teamId
+  // Player Upsert via backend's registerOrUpdatePlayer endpoint (using userId)
+  await axios.post('http://localhost:8080/api/player/registerOrUpdate', null, {
+    params: {
+      userId,
+      playerName,
+      playerCity,
+      phone,
+      playerType,
+      teamName,
+      teamPassword
+    }
   });
 }
 
-// Main Login Component
+// Fan registration helper
+async function registerFan({ favoritePlayer, region, email, password }) {
+  // Register user
+  const { data: user } = await axios.post('http://localhost:8080/api/user/register', {
+    firstName: favoritePlayer,
+    email,
+    password,
+    roles: ['FAN']
+  }, { params: { password } });
+  const userId = user.id;
+
+  // Register fan and link to user
+  await axios.post('http://localhost:8080/api/fan/create', {
+    userId,
+    favoritePlayer,
+    region,
+    // Optionally add followedTeamIds and followedTournamentIds fields
+  });
+}
+
 function Login() {
-  const { role: authRole, setRole } = useAuth();
-
-  const [isRegister, setIsRegister] = useState(false);
-  const [role, setLocalRole] = useState("");
-  const [teamAction, setTeamAction] = useState("");
-
-  const [showPlayerDetails, setShowPlayerDetails] = useState(false);
-
-  // Player-related states
-  const [playerName, setPlayerName] = useState("");
-  const [playerCity, setPlayerCity] = useState("");
-  const [phone, setPhone] = useState("");
-  const [playedIn, setPlayedIn] = useState("");
-  const [playerType, setPlayerType] = useState("");
-  const [lastPlayedFor, setLastPlayedFor] = useState("");
-  const [teamName, setTeamName] = useState("");
-  const [teamPassword, setTeamPassword] = useState("");
-
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
-
+  const { setRole } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (teamAction === "join") {
-      setShowPlayerDetails(false);
-      const timeout = setTimeout(() => setShowPlayerDetails(true), 360);
-      return () => clearTimeout(timeout);
-    } else {
-      setShowPlayerDetails(false);
-    }
-  }, [teamAction]);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [isRegister, setIsRegister] = useState(false);
+  const [role, setLocalRole] = useState('');
+  const [playerData, setPlayerData] = useState({
+    playerName: '', playerCity: '', phone: '', playerType: '', teamName: '', teamPassword: ''
+  });
+  const [fanData, setFanData] = useState({
+    favoritePlayer: '', region: ''
+    // Optionally: followedTeamIds: '', followedTournamentIds: ''
+  });
 
-  // Login handler with role detection from backend
-  const handleLogin = async (e) => {
+  async function handleLogin(e) {
     e.preventDefault();
-    setLoginError("");
+    setLoginError('');
     try {
-      const { data: users } = await axios.get('http://localhost:8080/api/users/get');
-      const user = users.find(u =>
-        u.email === loginEmail && u.password === loginPassword
-      );
-      if (user) {
-        alert(`${user.role} Login successful!`);
-        setRole(user.role);
-        navigate("/tournaments");
+      const { data: user } = await axios.post('http://localhost:8080/api/user/login', null, {
+        params: { email, password }
+      });
+      if (user && user.roles) {
+        alert(`${user.roles[0]} Login successful!`);
+        setRole(user.roles);
+        navigate('/tournaments');
       } else {
-        setLoginError("Invalid email or password. Please register if you don't have an account.");
+        setLoginError('Invalid credentials');
       }
-    } catch (err) {
-      setLoginError("Login failed. Please try again.");
+    } catch {
+      setLoginError('Login failed');
     }
-  };
+  }
 
-  // Registration submit handler
-  const handleRegisterSubmit = async (e) => {
+  async function handleRegister(e) {
     e.preventDefault();
-
-    const email = e.target.email.value;
-    const password = e.target.password.value;
-
     if (!role) {
-      alert("Please select a role");
+      alert('Please select a role');
       return;
     }
-
-    if (role === 'FAN') {
-      try {
-        await registerFan({
-          name: playerName || '',
-          email,
-          password,
-          followedTeamIds: [] // optionally fill if you add favorite teams at registration
-        });
+    try {
+      if (role === 'PLAYER') {
+        await registerOrUpdatePlayer({ ...playerData, email, password });
+        alert('Player registration & team join successful!');
+        setRole('PLAYER');
+        navigate('/tournaments');
+      } else if (role === 'FAN') {
+        await registerFan({ ...fanData, email, password });
         alert('Fan registration successful!');
         setRole('FAN');
-        navigate("/tournaments");
-      } catch (err) {
-        alert('Failed to register fan: ' + (err.response?.data || err.message || 'Server error'));
+        navigate('/tournaments');
       }
-    } else if (role === 'PLAYER') {
-      try {
-        await registerPlayer({
-          playerName,
-          email,
-          password,
-          teamName,
-          teamPassword,
-          playerCity,
-          phone,
-          playedIn,
-          playerType,
-          lastPlayedFor
-        });
-        alert('Player registration and team join successful!');
-        setRole('PLAYER');
-        navigate("/tournaments");
-      } catch (err) {
-        alert('Failed to join team: ' + (err.response?.data || err.message || 'Server error'));
-      }
+    } catch (e) {
+      alert(`Registration failed: ${e.response?.data || e.message || 'Unknown error'}`);
     }
-  };
-
-  const showLeftPanel = !(teamAction || isRegister);
-  const leftPanelClass = showLeftPanel ? "w-1/2" : "hidden";
-  const rightPanelClass = showLeftPanel ? "w-1/2" : "w-full";
+  }
 
   return (
-    <div className={`flex min-h-screen bg-[#FFF7E9] overflow-hidden transition-all duration-500 ease-in-out`}>
-      {/* Left Panel */}
-      <div className={`${leftPanelClass} bg-[#FFF7E9] items-center justify-center p-8 hidden md:flex`}>
-        <div className="text-center">
-          <img src={Img} alt="BatsUp" className="w-64 mx-auto" />
-          <h2 className="text-xl font-bold text-[#7B1E7A] mt-4">Turn your cricket ideas into reality.</h2>
-          <p className="text-black mt-2 text-sm">Start for free and get attractive offers from the community</p>
+    <div className="flex min-h-screen bg-[#FFF7E9]">
+      <div className="hidden md:flex w-1/2 bg-[#FFF7E9] justify-center items-center">
+        <img src={Img} alt="BatsUp" className="w-64" />
+        <div className="ml-4 text-center">
+          <h2 className="text-xl font-bold text-[#7B1E7A]">Turn your cricket ideas into reality.</h2>
+          <p className="text-black mt-2 text-sm">Start free & get offers from community</p>
         </div>
       </div>
 
-      {/* Right Panel */}
-      <div className={`flex flex-col justify-center items-center bg-white p-6 shadow-lg mt-[72px] md:mt-0 ${rightPanelClass}`}>
-        <div className={`w-full ${teamAction ? "max-w-4xl" : "max-w-xs"}`}>
-          {!isRegister ? (
-            <>
-              <h2 className="text-xl font-bold text-[#7B1E7A] mb-2">Login to your Account</h2>
-              {loginError && <div className="text-red-600 mb-2 text-sm">{loginError}</div>}
-              <form onSubmit={handleLogin} className="space-y-4">
-                <input
-                  type="email"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="Email"
-                  required
-                  className="w-full border border-gray-300 rounded p-2"
-                />
-                <input
-                  type="password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="Password"
-                  required
-                  className="w-full border border-gray-300 rounded p-2"
-                />
-                <button
-                  type="submit"
-                  className="w-full mt-6 bg-[#7B1E7A] text-white rounded py-2 font-semibold"
-                >
-                  Login
-                </button>
-              </form>
-              <p className="text-center text-xs mt-4">
-                Don't have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => setIsRegister(true)}
-                  className="text-[#7B1E7A] underline"
-                >
-                  Register
-                </button>
-              </p>
-            </>
-          ) : (
-            <>
-              <h2 className="text-xl font-bold text-[#7B1E7A] mb-2">Create Your Account</h2>
-              <p className="text-sm mb-6 text-black">Join the community now</p>
-
-              <div className="flex mb-6 gap-4">
-                <button
-                  type="button"
-                  className={`flex-grow py-2 rounded-lg font-semibold text-sm border ${teamAction === 'register' ? 'bg-[#7B1E7A] text-white border-none' : 'border-gray-300 text-gray-700'}`}
-                  onClick={() => setTeamAction('register')}
-                >
-                  Register Team
-                </button>
-                <button
-                  type="button"
-                  className={`flex-grow py-2 rounded-lg font-semibold text-sm border ${teamAction === 'join' ? 'bg-[#7B1E7A] text-white border-none' : 'border-gray-300 text-gray-700'}`}
-                  onClick={() => setTeamAction('join')}
-                >
-                  Join Team
-                </button>
-              </div>
-
-              <form onSubmit={handleRegisterSubmit} className="space-y-4">
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="Email"
-                  required
-                  className="w-full border border-gray-300 rounded p-2"
-                />
-                <input
-                  name="password"
-                  type="password"
-                  placeholder="Password"
-                  required
-                  className="w-full border border-gray-300 rounded p-2"
-                />
-                <input
-                  type="password"
-                  placeholder="Confirm Password"
-                  required
-                  className="w-full border border-gray-300 rounded p-2"
-                />
-                <select
-                  value={role}
-                  onChange={e => setLocalRole(e.target.value)}
-                  className="w-full border border-gray-300 rounded p-2"
-                  required
-                >
-                  <option value="">Select Role</option>
-                  <option value="PLAYER">Player</option>
-                  <option value="FAN">Fan</option>
-                </select>
-
-                {(role === 'PLAYER' || teamAction === 'join') && (
-                  <PlayerDetailsForm
-                    playerName={playerName} setPlayerName={setPlayerName}
-                    playerCity={playerCity} setPlayerCity={setPlayerCity}
-                    phone={phone} setPhone={setPhone}
-                    playedIn={playedIn} setPlayedIn={setPlayedIn}
-                    playerType={playerType} setPlayerType={setPlayerType}
-                    lastPlayedFor={lastPlayedFor} setLastPlayedFor={setLastPlayedFor}
-                    teamName={teamName} setTeamName={setTeamName}
-                    teamPassword={teamPassword} setTeamPassword={setTeamPassword}
-                  />
-                )}
-
-                <button
-                  type="submit"
-                  className="w-full mt-6 bg-[#7B1E7A] text-white rounded py-2 font-semibold"
-                >
-                  Register
-                </button>
-              </form>
-
-              <p className="text-center text-xs mt-4">
-                Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsRegister(false);
-                    setTeamAction('');
-                    setLocalRole('');
-                  }}
-                  className="text-[#7B1E7A] underline"
-                >
-                  Login
-                </button>
-              </p>
-            </>
-          )}
-        </div>
+      <div className="w-full md:w-1/2 p-8">
+        {!isRegister ? (
+          <>
+            <h2 className="text-2xl font-bold text-[#7B1E7A] mb-5">Login</h2>
+            {loginError && <p className="text-red-600 mb-4">{loginError}</p>}
+            <form onSubmit={handleLogin} className="space-y-4 max-w-sm">
+              <input
+                type="email"
+                placeholder="Email"
+                className="w-full p-2 border border-gray-300 rounded"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                className="w-full p-2 border border-gray-300 rounded"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <button className="w-full py-2 bg-[#7B1E7A] text-white rounded hover:bg-purple-700" type="submit">Login</button>
+            </form>
+            <p className="mt-4 text-center">
+              Don't have an account?{' '}
+              <button className="text-[#7B1E7A] underline" onClick={() => setIsRegister(true)}>
+                Register here
+              </button>
+            </p>
+          </>
+        ) : (
+          <>
+            <h2 className="text-2xl font-bold text-[#7B1E7A] mb-5">Register</h2>
+            <form onSubmit={handleRegister} className="space-y-4 max-w-sm">
+              <input
+                type="email"
+                placeholder="Email"
+                className="w-full p-2 border border-gray-300 rounded"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                className="w-full p-2 border border-gray-300 rounded"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <select
+                value={role}
+                onChange={e => setLocalRole(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded"
+                required
+              >
+                <option value="">Select Role</option>
+                <option value="PLAYER">Player</option>
+                <option value="FAN">Fan</option>
+              </select>
+              {role === "PLAYER" && (
+                <PlayerDetailsForm data={playerData} setData={setPlayerData} />
+              )}
+              {role === "FAN" && (
+                <FanDetailsForm data={fanData} setData={setFanData} />
+              )}
+              <button className="w-full py-2 bg-[#7B1E7A] text-white rounded hover:bg-purple-700" type="submit">Register</button>
+            </form>
+            <p className="mt-4 text-center">
+              Already have an account?{' '}
+              <button className="text-[#7B1E7A] underline" onClick={() => setIsRegister(false)}>
+                Login here
+              </button>
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
 export default Login;
-
-
 
 // import { useState, useEffect } from "react";
 // import { useNavigate } from "react-router-dom";

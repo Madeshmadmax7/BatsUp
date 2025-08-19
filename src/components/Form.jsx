@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import axios from "axios";
 
 const Form = ({ tournament, onClose, onRegister }) => {
-    const [players, setPlayers] = useState([""]); // start with 1 player
-    const [jerseyNumbers, setJerseyNumbers] = useState([""]);
     const [teamName, setTeamName] = useState("");
     const [teamPassword, setTeamPassword] = useState("");
     const [phone, setPhone] = useState("");
     const [location, setLocation] = useState("");
     const [logoLink, setLogoLink] = useState("");
+    const [players, setPlayers] = useState([""]);
+    const [jerseyNumbers, setJerseyNumbers] = useState([""]);
 
     const handleAddPlayer = () => {
         if (players.length < 15) {
@@ -27,43 +27,49 @@ const Form = ({ tournament, onClose, onRegister }) => {
     };
 
     const handleSubmit = async () => {
-        // simple validation
-        if (
-            !teamName ||
-            !teamPassword ||
-            players.some((p) => !p) ||
-            jerseyNumbers.some((j) => !j) ||
-            !phone ||
-            !location ||
-            !logoLink
-        ) {
-            alert("Please fill all fields and provide logo URL.");
+        if (!teamName || !teamPassword) {
+            alert("Please fill Team Name and Team Password.");
             return;
         }
 
-        // create object instead of FormData
-        const payload = {
-            teamName,
-            teamPassword,
-            phoneNumber: phone,
-            location,
-            logo: logoLink,
-            tournamentId: tournament.id,
-            tournamentName: tournament.tournamentName || tournament.title,
-            tournamentDate: tournament.startDate || tournament.date,
-            tournamentType: tournament.matchType || tournament.type,
-            players: players.map((name, i) => ({
-                playerName: name,
-                playerJersey: jerseyNumbers[i],
-            })),
-        };
-
         try {
-            await axios.post(
-                "http://localhost:8080/api/tournaments/create",
-                payload
+            const teamCreatePayload = {
+                name: teamName,
+                password: teamPassword,
+            };
+
+            const { data: createdTeam } = await axios.post(
+                "http://localhost:8080/api/team/create",
+                teamCreatePayload
             );
-            alert(`Team '${teamName}' successfully registered!`);
+
+            const teamId = createdTeam.id;
+
+            await axios.post(
+                `http://localhost:8080/api/tournaments/${tournament.id}/add-team/${teamId}`
+            );
+
+            for (let i = 0; i < players.length; i++) {
+                const playerName = players[i].trim();
+                const jerseyRaw = jerseyNumbers[i];
+                if (!playerName || !jerseyRaw) continue;
+
+                const jerseyNumber = parseInt(jerseyRaw, 10);
+                if (isNaN(jerseyNumber)) continue;
+
+                const playerPayload = {
+                    nickname: playerName,
+                    jerseyNumber: jerseyNumber,
+                    teamId: teamId,
+                };
+
+                await axios.post(
+                    "http://localhost:8080/api/player/createNoUser",
+                    playerPayload
+                );
+            }
+
+            alert(`Team '${teamName}' successfully registered with players!`);
             if (onRegister) onRegister();
             onClose();
         } catch (err) {
@@ -91,13 +97,17 @@ const Form = ({ tournament, onClose, onRegister }) => {
                                 className="w-full h-64 object-cover rounded-xl shadow mb-4"
                             />
                             <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                                {tournament.tournamentName || tournament.title}
+                                {tournament?.tournamentName || tournament?.title}
                             </h2>
                             <p className="text-sm text-gray-500 mb-4">
-                                {tournament.startDate || tournament.date} | {tournament.location}
+                                {tournament?.startDate
+                                    ? new Date(tournament.startDate).toLocaleDateString()
+                                    : ""}
+                                {" | "}
+                                {tournament?.location || ""}
                             </p>
                             <p className="text-gray-700 text-sm leading-relaxed">
-                                {tournament.description}
+                                {tournament?.description || ""}
                             </p>
                         </div>
 
@@ -134,50 +144,60 @@ const Form = ({ tournament, onClose, onRegister }) => {
                                 type="text"
                                 value={logoLink}
                                 onChange={(e) => setLogoLink(e.target.value)}
-                                placeholder="Team Logo URL"
+                                placeholder="Logo URL"
                                 className="w-full border border-gray-300 p-3 rounded-lg"
                             />
 
-                            <h4 className="text-lg font-semibold text-gray-700 mt-6">
-                                Player Details
-                            </h4>
+                            <h4 className="text-lg font-semibold mt-4">Player Details</h4>
                             <div className="max-h-80 overflow-y-auto pr-1 space-y-2">
-                                {players.map((player, i) => (
-                                    <div key={i} className="flex gap-2 items-center">
+                                {players.map((player, idx) => (
+                                    <div key={idx} className="flex gap-2 items-center">
                                         <input
                                             type="text"
+                                            className="flex-1 border border-gray-300 p-2 rounded"
+                                            placeholder={`Player ${idx + 1} Name`}
                                             value={player}
                                             onChange={(e) => {
                                                 const newPlayers = [...players];
-                                                newPlayers[i] = e.target.value;
+                                                newPlayers[idx] = e.target.value;
                                                 setPlayers(newPlayers);
                                             }}
-                                            placeholder={`Player ${i + 1} Name`}
-                                            className="flex-1 border border-gray-300 p-2 rounded-lg"
                                         />
                                         <input
                                             type="number"
-                                            value={jerseyNumbers[i]}
+                                            className="w-20 border border-gray-300 p-2 rounded"
+                                            placeholder="Jersey No."
+                                            value={jerseyNumbers[idx]}
                                             onChange={(e) => {
                                                 const newJerseys = [...jerseyNumbers];
-                                                newJerseys[i] = e.target.value;
+                                                newJerseys[idx] = e.target.value;
                                                 setJerseyNumbers(newJerseys);
                                             }}
-                                            placeholder="Jersey No."
-                                            className="w-24 border border-gray-300 p-2 rounded-lg"
                                         />
                                         <button
-                                            onClick={() => handleDeletePlayer(i)}
-                                            className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-lg"
+                                            type="button"
+                                            className="bg-red-500 text-white px-2 rounded"
+                                            onClick={() => {
+                                                const newPlayers = [...players];
+                                                const newJerseys = [...jerseyNumbers];
+                                                newPlayers.splice(idx, 1);
+                                                newJerseys.splice(idx, 1);
+                                                setPlayers(newPlayers);
+                                                setJerseyNumbers(newJerseys);
+                                            }}
                                         >
-                                            ✕
+                                            ×
                                         </button>
                                     </div>
                                 ))}
                                 {players.length < 15 && (
                                     <button
-                                        onClick={handleAddPlayer}
-                                        className="w-full border border-dashed border-gray-400 text-gray-600 py-2 rounded-lg hover:bg-gray-100"
+                                        type="button"
+                                        className="w-full mt-2 py-2 border border-dashed border-gray-400 rounded text-gray-600 hover:bg-gray-200"
+                                        onClick={() => {
+                                            setPlayers([...players, ""]);
+                                            setJerseyNumbers([...jerseyNumbers, ""]);
+                                        }}
                                     >
                                         + Add Player
                                     </button>
@@ -185,10 +205,11 @@ const Form = ({ tournament, onClose, onRegister }) => {
                             </div>
 
                             <button
+                                type="button"
+                                className="w-full mt-4 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-3 rounded"
                                 onClick={handleSubmit}
-                                className="w-full bg-yellow-400 hover:bg-yellow-500 transition duration-300 text-black px-4 py-3 rounded-xl font-semibold mt-4"
                             >
-                                Submit Registration
+                                Register Team
                             </button>
                         </div>
                     </div>
@@ -199,7 +220,6 @@ const Form = ({ tournament, onClose, onRegister }) => {
 };
 
 export default Form;
-
 
 
 // import React, { useState } from "react";

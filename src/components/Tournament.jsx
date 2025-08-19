@@ -43,7 +43,7 @@ const Tournament = () => {
                   {tournament.matchType}
                 </span>
                 <span className="text-sm text-gray-600">
-                  {tournament.startDate}
+                  {new Date(tournament.startDate).toLocaleDateString('en-GB')}
                 </span>
               </div>
               <h3 className="text-xl font-semibold mb-2">{tournament.tournamentName}</h3>

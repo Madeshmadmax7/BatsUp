@@ -5,12 +5,44 @@ import axios from "axios";
 const TournamentDisplay = () => {
     const navigate = useNavigate();
     const [tournaments, setTournaments] = useState([]);
+    const [displayedTournaments, setDisplayedTournaments] = useState([]);
 
     useEffect(() => {
         axios
             .get("http://localhost:8080/api/tournaments/get")
-            .then((res) => setTournaments(res.data))
-            .catch(() => setTournaments([]));
+            .then((res) => {
+                const allTournaments = res.data || [];
+
+                // Separate Adult tournaments and others
+                const adultTournaments = allTournaments.filter(t => t.matchType === "Adult");
+
+                // Shuffle function
+                const shuffleArray = (arr) => {
+                    return arr
+                        .map(value => ({ value, sort: Math.random() }))
+                        .sort((a, b) => a.sort - b.sort)
+                        .map(({ value }) => value);
+                };
+
+                // Shuffle Adult tournaments and pick up to 3
+                let selected = shuffleArray(adultTournaments).slice(0, 3);
+
+                // If less than 3 adults, fill remaining with other random tournaments
+                if (selected.length < 3) {
+                    const remainingCount = 3 - selected.length;
+                    // Filter out already selected tournaments
+                    const nonSelected = allTournaments.filter(t => !selected.includes(t));
+                    const shuffledNonSelected = shuffleArray(nonSelected);
+                    selected = selected.concat(shuffledNonSelected.slice(0, remainingCount));
+                }
+
+                setTournaments(allTournaments);
+                setDisplayedTournaments(selected);
+            })
+            .catch(() => {
+                setTournaments([]);
+                setDisplayedTournaments([]);
+            });
     }, []);
 
     return (
@@ -27,7 +59,7 @@ const TournamentDisplay = () => {
                 </div>
 
                 <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-8">
-                    {tournaments.map((t, idx) => (
+                    {displayedTournaments.map((t, idx) => (
                         <div
                             key={t.id || idx}
                             className="bg-white rounded-xl overflow-hidden shadow hover:shadow-lg transition"
@@ -45,14 +77,10 @@ const TournamentDisplay = () => {
                                     <span className="px-2 py-0.5 bg-yellow-300 text-black rounded-full font-semibold">
                                         {t.matchType}
                                     </span>
-                                    <span>{t.startDate}</span>
+                                    <span>{new Date(t.startDate).toLocaleDateString()}</span>
                                 </div>
-                                <h3 className="font-semibold text-lg text-black mb-1">
-                                    {t.tournamentName}
-                                </h3>
-                                <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                                    {t.description}
-                                </p>
+                                <h3 className="font-semibold text-lg text-black mb-1">{t.tournamentName}</h3>
+                                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{t.description}</p>
                                 <button className="text-sm text-yellow-600 font-semibold hover:underline">
                                     Join Tournament →
                                 </button>
