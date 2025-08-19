@@ -1,14 +1,16 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useAuth } from "../AuthContext";
 
-const Login = ({ setRole }) => {
+const LoginRegister = () => {
   const [isRegister, setIsRegister] = useState(false);
   const [role, setSelectedRole] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Player data
+  const { setUser } = useAuth();
+
+  // Player fields
   const [playerData, setPlayerData] = useState({
     playerName: "",
     playerCity: "",
@@ -18,96 +20,119 @@ const Login = ({ setRole }) => {
     teamPassword: "",
   });
 
-  // Fan data
+  // Fan fields
   const [fanData, setFanData] = useState({
     favoritePlayer: "",
     region: "",
   });
 
   const navigate = useNavigate();
+  const { setRole } = useAuth(); // Using context's setRole to update role application-wide
 
   // -----------------------------
-  // Register API Calls
+  // Register Logic
   // -----------------------------
-  async function registerPlayer() {
-    const { data: user } = await axios.post(
-      "http://localhost:8080/api/user/register",
-      {
-        firstName: playerData.playerName,
-        email,
-        password,
-        roles: ["PLAYER"],
-      },
-      { params: { password } }
-    );
-
-    await axios.post("http://localhost:8080/api/player/registerOrUpdate", null, {
-      params: {
-        userId: user.id,
-        ...playerData,
-      },
+  const registerPlayer = async (userId) => {
+    const response = await fetch(`http://localhost:8080/api/player/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        nickname: playerData.playerName,
+        city: playerData.playerCity,
+        phone: playerData.phone,
+        playerType: playerData.playerType,
+        teamName: playerData.teamName,
+        teamPassword: playerData.teamPassword,
+      }),
     });
-  }
+    if (!response.ok) throw new Error("Player registration failed");
+    return await response.json();
+  };
 
-  async function registerFan() {
-    const { data: user } = await axios.post(
-      "http://localhost:8080/api/user/register",
+  const registerFan = async (userId) => {
+    const response = await fetch(
+      `http://localhost:8080/api/fan/create?userId=${userId}`,
       {
-        firstName: fanData.favoritePlayer,
-        email,
-        password,
-        roles: ["FAN"],
-      },
-      { params: { password } }
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          favoritePlayer: fanData.favoritePlayer,
+          region: fanData.region,
+        }),
+      }
     );
+    if (!response.ok) throw new Error("Fan registration failed");
+    return await response.json();
+  };
 
-    await axios.post("http://localhost:8080/api/fan/create", {
-      userId: user.id,
-      ...fanData,
-    });
-  }
-
-  // -----------------------------
-  // Handlers
-  // -----------------------------
-  async function handleRegister(e) {
+  const handleRegister = async (e) => {
     e.preventDefault();
     try {
+      // Step 1: Register User (including lastName as empty string for DB constraints)
+      const userResponse = await fetch("http://localhost:8080/api/user/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          firstName: role === "PLAYER" ? playerData.playerName : fanData.favoritePlayer,
+          lastName: "", // required by backend DB schema
+          roles: [role],
+        }),
+      });
+
+      if (!userResponse.ok) {
+        const errText = await userResponse.text();
+        throw new Error("User registration failed: " + errText);
+      }
+      const user = await userResponse.json();
+
+      // Step 2: Register Player or Fan details
       if (role === "PLAYER") {
-        await registerPlayer();
-        setRole("PLAYER");
-        alert("Player registered successfully!");
+        await registerPlayer(user.id);
       } else if (role === "FAN") {
-        await registerFan();
-        setRole("FAN");
-        alert("Fan registered successfully!");
+        await registerFan(user.id);
       }
-      navigate("/tournaments");
-    } catch (e) {
-      alert("Registration failed: " + (e.response?.data || e.message));
+
+      alert("Registration successful!");
+      setIsRegister(false); // back to login mode
+    } catch (err) {
+      alert("Registration failed: " + err.message);
     }
+  };
+
+  // -----------------------------
+  // Login Logic
+  // -----------------------------
+  const handleLogin = async (e) => {
+  e.preventDefault();
+  try {
+    const response = await fetch("http://localhost:8080/api/user/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) throw new Error("Login failed");
+    const user = await response.json();
+
+    const userRole = user.roles?.[0] || "USER";
+
+    // Assuming user object contains id corresponding to fan/player
+    setUser({ id: user.id, role: userRole });
+
+    if (userRole === "ADMIN") navigate("/admin/tournament-list");
+    else navigate("/tournaments");
+  } catch (err) {
+    alert("Login failed: " + err.message);
   }
+};
 
-  async function handleLogin(e) {
-    e.preventDefault();
-    try {
-      const { data: user } = await axios.post(
-        "http://localhost:8080/api/user/login",
-        { email, password }
-      );
-      const userRole = user.roles[0];
-      setRole(userRole);
 
-      if (userRole === "ADMIN") {
-        navigate("/admin/tournament-list");
-      } else {
-        navigate("/tournaments");
-      }
-    } catch {
-      alert("Login failed. Please check credentials.");
-    }
-  }
-
+  // -----------------------------
+  // UI
+  // -----------------------------
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white shadow-md rounded-lg w-full max-w-md p-6">
@@ -120,9 +145,7 @@ const Login = ({ setRole }) => {
           <button
             onClick={() => setIsRegister(false)}
             className={`px-4 py-2 rounded ${
-              !isRegister
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-200 text-black"
+              !isRegister ? "bg-indigo-600 text-white" : "bg-gray-200 text-black"
             }`}
           >
             Login
@@ -130,19 +153,14 @@ const Login = ({ setRole }) => {
           <button
             onClick={() => setIsRegister(true)}
             className={`px-4 py-2 rounded ${
-              isRegister
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-200 text-black"
+              isRegister ? "bg-indigo-600 text-white" : "bg-gray-200 text-black"
             }`}
           >
             Register
           </button>
         </div>
 
-        <form
-          onSubmit={isRegister ? handleRegister : handleLogin}
-          className="space-y-4 text-black"
-        >
+        <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-4 text-black">
           {/* Common fields */}
           <input
             type="email"
@@ -162,9 +180,9 @@ const Login = ({ setRole }) => {
             required
           />
 
+          {/* Register form */}
           {isRegister && (
             <>
-              {/* Role Selector */}
               <select
                 className="w-full p-2 border rounded text-black"
                 value={role}
@@ -176,7 +194,6 @@ const Login = ({ setRole }) => {
                 <option value="FAN">Fan</option>
               </select>
 
-              {/* Player form */}
               {role === "PLAYER" && (
                 <div className="space-y-2">
                   <input
@@ -185,11 +202,9 @@ const Login = ({ setRole }) => {
                     className="w-full p-2 border rounded text-black"
                     value={playerData.playerName}
                     onChange={(e) =>
-                      setPlayerData({
-                        ...playerData,
-                        playerName: e.target.value,
-                      })
+                      setPlayerData({ ...playerData, playerName: e.target.value })
                     }
+                    required
                   />
                   <input
                     type="text"
@@ -197,10 +212,7 @@ const Login = ({ setRole }) => {
                     className="w-full p-2 border rounded text-black"
                     value={playerData.playerCity}
                     onChange={(e) =>
-                      setPlayerData({
-                        ...playerData,
-                        playerCity: e.target.value,
-                      })
+                      setPlayerData({ ...playerData, playerCity: e.target.value })
                     }
                   />
                   <input
@@ -209,10 +221,7 @@ const Login = ({ setRole }) => {
                     className="w-full p-2 border rounded text-black"
                     value={playerData.phone}
                     onChange={(e) =>
-                      setPlayerData({
-                        ...playerData,
-                        phone: e.target.value,
-                      })
+                      setPlayerData({ ...playerData, phone: e.target.value })
                     }
                   />
                   <input
@@ -233,10 +242,7 @@ const Login = ({ setRole }) => {
                     className="w-full p-2 border rounded text-black"
                     value={playerData.teamName}
                     onChange={(e) =>
-                      setPlayerData({
-                        ...playerData,
-                        teamName: e.target.value,
-                      })
+                      setPlayerData({ ...playerData, teamName: e.target.value })
                     }
                   />
                   <input
@@ -254,7 +260,6 @@ const Login = ({ setRole }) => {
                 </div>
               )}
 
-              {/* Fan form */}
               {role === "FAN" && (
                 <div className="space-y-2">
                   <input
@@ -268,6 +273,7 @@ const Login = ({ setRole }) => {
                         favoritePlayer: e.target.value,
                       })
                     }
+                    required
                   />
                   <input
                     type="text"
@@ -275,10 +281,7 @@ const Login = ({ setRole }) => {
                     className="w-full p-2 border rounded text-black"
                     value={fanData.region}
                     onChange={(e) =>
-                      setFanData({
-                        ...fanData,
-                        region: e.target.value,
-                      })
+                      setFanData({ ...fanData, region: e.target.value })
                     }
                   />
                 </div>
@@ -298,8 +301,7 @@ const Login = ({ setRole }) => {
   );
 };
 
-export default Login;
-
+export default LoginRegister;
 
 // import { useState, useEffect } from "react";
 // import { useNavigate } from "react-router-dom";

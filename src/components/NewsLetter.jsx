@@ -49,7 +49,9 @@ function NewsLetter({ fanId, count = 3 }) {
                         teams.filter((team) => (fan.followedTeamIds || []).includes(team.id))
                     );
                     setFavTournaments(
-                        tournaments.filter((t) => (fan.followedTournamentIds || []).includes(t.id))
+                        tournaments.filter((t) =>
+                            (fan.followedTournamentIds || []).includes(t.id)
+                        )
                     );
                 })
                 .catch(() => {
@@ -106,7 +108,7 @@ function NewsLetter({ fanId, count = 3 }) {
                     ) : (
                         <div className="flex space-x-6">
                             {favorites.map(({ id, teamName, logo }) => (
-                                <div key={id} className="flex flex-col items-center">
+                                <div key={id} className="flex flex-col items-center cursor-pointer select-none">
                                     {logo ? (
                                         <img
                                             src={logo}
@@ -133,7 +135,7 @@ function NewsLetter({ fanId, count = 3 }) {
                     ) : (
                         <div className="flex space-x-6">
                             {favTournaments.map(({ id, tournamentName, image }) => (
-                                <div key={id} className="flex flex-col items-center">
+                                <div key={id} className="flex flex-col items-center cursor-pointer select-none">
                                     {image ? (
                                         <img
                                             src={image}
