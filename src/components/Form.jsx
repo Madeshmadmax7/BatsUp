@@ -10,22 +10,6 @@ const Form = ({ tournament, onClose, onRegister }) => {
     const [players, setPlayers] = useState([""]);
     const [jerseyNumbers, setJerseyNumbers] = useState([""]);
 
-    const handleAddPlayer = () => {
-        if (players.length < 15) {
-            setPlayers([...players, ""]);
-            setJerseyNumbers([...jerseyNumbers, ""]);
-        }
-    };
-
-    const handleDeletePlayer = (index) => {
-        const newPlayers = [...players];
-        const newJerseys = [...jerseyNumbers];
-        newPlayers.splice(index, 1);
-        newJerseys.splice(index, 1);
-        setPlayers(newPlayers);
-        setJerseyNumbers(newJerseys);
-    };
-
     const handleSubmit = async () => {
         if (!teamName || !teamPassword) {
             alert("Please fill Team Name and Team Password.");
@@ -36,6 +20,9 @@ const Form = ({ tournament, onClose, onRegister }) => {
             const teamCreatePayload = {
                 name: teamName,
                 password: teamPassword,
+                phoneNumber: phone,
+                location: location,
+                logo: logoLink,
             };
 
             const { data: createdTeam } = await axios.post(
@@ -102,9 +89,8 @@ const Form = ({ tournament, onClose, onRegister }) => {
                             <p className="text-sm text-gray-500 mb-4">
                                 {tournament?.startDate
                                     ? new Date(tournament.startDate).toLocaleDateString()
-                                    : ""}
-                                {" | "}
-                                {tournament?.location || ""}
+                                    : ""}{" "}
+                                | {tournament?.location || ""}
                             </p>
                             <p className="text-gray-700 text-sm leading-relaxed">
                                 {tournament?.description || ""}

@@ -16,6 +16,7 @@ import Registered from './components/Registered';
 import { AuthProvider } from './AuthContext';
 import NewsLetter from './components/NewsLetter';
 import LiveScores from './components/LiveScores';
+import TeamsPage from './components/TeamsPage';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -30,7 +31,6 @@ function App() {
   }
 
   return (
-    <AuthProvider>
       <Router>
         <Navbar />
         <Routes>
@@ -38,6 +38,7 @@ function App() {
           <Route path="/tournaments" element={<Tournament />} />
           <Route path="/fixtures" element={<FixturesPage />} />
           <Route path="/about" element={<About />} />
+          <Route path="/teams" element={<TeamsPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/manage" element={<AdminTeams />} />
           <Route path="/registered" element={<Registered />} />
@@ -46,7 +47,6 @@ function App() {
         </Routes>
         <FooterPage />
       </Router>
-    </AuthProvider>
   );
 }
 

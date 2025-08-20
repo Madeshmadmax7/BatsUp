@@ -22,21 +22,17 @@ const Registered = () => {
                         key={index}
                         className="bg-gray-800 text-white rounded-xl shadow-lg overflow-hidden hover:scale-105 transform transition duration-300"
                     >
-                        {/* Image */}
                         <img
                             src={tournament.image}
                             alt={tournament.tournamentName || tournament.title}
                             className="w-full h-40 object-cover"
                         />
-
-                        {/* Details */}
                         <div className="p-4">
                             <h2 className="text-lg font-bold">{tournament.tournamentName || tournament.title}</h2>
                             <p className="text-xs text-gray-400 mb-2">
                                 {tournament.startDate || tournament.date} • {tournament.matchType || tournament.type} • {tournament.location}
                             </p>
                             <p className="text-sm mb-4">{tournament.description}</p>
-                            {/* Teams */}
                             <div className="flex flex-wrap gap-2">
                                 {(tournament.teams || []).map((team, i) => (
                                     <button

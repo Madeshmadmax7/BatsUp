@@ -1,278 +1,248 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { useAuth } from "../AuthContext";
 
-function getRandomSubset(arr, count) {
-    if (!arr || arr.length === 0) return [];
-    const shuffled = arr.slice().sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, count);
+function groupNews(news, favTeamIds = new Set(), favTournamentIds = new Set(), favTeamNames = new Set()) {
+    const preferred = [];
+    const others = [];
+    for (const n of news) {
+        const tId = n.teamId ?? null;
+        const trId = n.tournamentId ?? null;
+        const tName = (n.teamName || "").toLowerCase();
+        const likedById = (tId && favTeamIds.has(tId)) || (trId && favTournamentIds.has(trId));
+        const likedByName = tName && favTeamNames.has(tName);
+        const liked = likedById || likedByName;
+        (liked ? preferred : others).push(n);
+    }
+    return { preferred, others };
 }
 
-function NewsLetter({ fanId, count = 3 }) {
+const NewsLetter = () => {
+    const { user, setUser } = useAuth();
+    const role = user?.role;
+
     const [teams, setTeams] = useState([]);
     const [tournaments, setTournaments] = useState([]);
-    const [favorites, setFavorites] = useState([]); // Selected Teams
-    const [favTournaments, setFavTournaments] = useState([]); // Selected Tournaments
     const [newsData, setNewsData] = useState([]);
 
-    // Fetch teams
+    const [fan, setFan] = useState(null);
+    const fanId = user?.fanId ?? fan?.id ?? null;
+
+    // Load base lists
     useEffect(() => {
-        axios
-            .get("http://localhost:8080/api/team/all")
-            .then((res) => setTeams(res.data))
+        axios.get("http://localhost:8080/api/team/all")
+            .then((r) => setTeams(r.data))
             .catch(() => setTeams([]));
-    }, []);
 
-    // Fetch tournaments
-    useEffect(() => {
-        axios
-            .get("http://localhost:8080/api/tournaments/get")
-            .then((res) => setTournaments(res.data))
+        axios.get("http://localhost:8080/api/tournaments/get")
+            .then((r) => setTournaments(r.data))
             .catch(() => setTournaments([]));
-    }, []);
 
-    // Fetch newsletters
-    useEffect(() => {
-        axios
-            .get("http://localhost:8080/api/newsletter/all")
-            .then((res) => setNewsData(res.data))
+        axios.get("http://localhost:8080/api/newsletter/all")
+            .then((r) => setNewsData(r.data))
             .catch(() => setNewsData([]));
     }, []);
 
-    // Fetch fan favorites for teams and tournaments
+    // Resolve fan by userId if needed
     useEffect(() => {
-        if (fanId) {
-            axios
-                .get(`http://localhost:8080/api/fan/${fanId}`)
-                .then((res) => {
-                    const fan = res.data;
-                    setFavorites(
-                        teams.filter((team) => (fan.followedTeamIds || []).includes(team.id))
-                    );
-                    setFavTournaments(
-                        tournaments.filter((t) =>
-                            (fan.followedTournamentIds || []).includes(t.id)
-                        )
-                    );
-                })
-                .catch(() => {
-                    setFavorites([]);
-                    setFavTournaments([]);
-                });
+        const needs = role === "FAN" && !user?.fanId && user?.id;
+        if (!needs) return;
+        (async () => {
+            try {
+                const res = await fetch(`http://localhost:8080/api/fan/by-user/${user.id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setFan(data);
+                    setUser((prev) => ({ ...prev, fanId: data.id }));
+                }
+            } catch { }
+        })();
+    }, [role, user?.id, user?.fanId, setUser]);
+
+    // If we have fanId but not the object, fetch it
+    useEffect(() => {
+        if (role !== "FAN" || !fanId) return;
+        (async () => {
+            try {
+                const res = await fetch(`http://localhost:8080/api/fan/${fanId}`);
+                if (res.ok) setFan(await res.json());
+            } catch { }
+        })();
+    }, [role, fanId]);
+
+    const favTeamIds = useMemo(() => new Set(fan?.followedTeamIds || []), [fan]);
+    const favTournamentIds = useMemo(() => new Set(fan?.followedTournamentIds || []), [fan]);
+    const favTeamNames = useMemo(() => {
+        // Build set of team names from teams with ids in fan.followedTeamIds for fallback name match
+        const set = new Set();
+        if (teams?.length && favTeamIds.size) {
+            teams.forEach((t) => {
+                if (favTeamIds.has(t.id) && t.teamName) set.add(t.teamName.toLowerCase());
+            });
         }
-    }, [fanId, teams, tournaments]);
+        return set;
+    }, [teams, favTeamIds]);
 
-    // Random subset of newsletters
-    const displayedNews = getRandomSubset(newsData, Math.min(count, newsData.length));
+    const { preferred, others } = useMemo(() => {
+        if (role !== "FAN") return { preferred: [], others: newsData };
+        return groupNews(newsData, favTeamIds, favTournamentIds, favTeamNames);
+    }, [newsData, role, favTeamIds, favTournamentIds, favTeamNames]);
 
-    // Toggle team selection
-    const toggleFavorite = (team) => {
-        const alreadyFav = favorites.some((f) => f.id === team.id);
-        const updated = alreadyFav
-            ? favorites.filter((f) => f.id !== team.id)
-            : [...favorites, team];
-        setFavorites(updated);
-
-        if (fanId) {
-            axios
-                .put(`http://localhost:8080/api/fan/${fanId}/follow-teams`, updated.map((t) => t.id))
-                .catch(console.error);
-        }
+    const toggleTeam = async (teamId) => {
+        if (!fan) return;
+        const next = new Set(favTeamIds);
+        next.has(teamId) ? next.delete(teamId) : next.add(teamId);
+        const body = Array.from(next);
+        try {
+            const res = await fetch(`http://localhost:8080/api/fan/${fan.id}/follow-teams`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+            if (res.ok) setFan(await res.json());
+        } catch { }
     };
 
-    // Toggle tournament selection
-    const toggleTournament = (tournament) => {
-        const alreadyFav = favTournaments.some((f) => f.id === tournament.id);
-        const updated = alreadyFav
-            ? favTournaments.filter((f) => f.id !== tournament.id)
-            : [...favTournaments, tournament];
-        setFavTournaments(updated);
-
-        if (fanId) {
-            axios
-                .put(`http://localhost:8080/api/fan/${fanId}/follow-tournaments`, updated.map((t) => t.id))
-                .catch(console.error);
-        }
+    const toggleTournament = async (tid) => {
+        if (!fan) return;
+        const next = new Set(favTournamentIds);
+        next.has(tid) ? next.delete(tid) : next.add(tid);
+        const body = Array.from(next);
+        try {
+            const res = await fetch(`http://localhost:8080/api/fan/${fan.id}/follow-tournaments`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+            if (res.ok) setFan(await res.json());
+        } catch { }
     };
+
+    const TeamChip = ({ t }) => {
+        const isFav = favTeamIds.has(t.id);
+        return (
+            <button
+                onClick={() => toggleTeam(t.id)}
+                className={`flex flex-col items-center gap-1 border rounded-2xl p-3 w-24 transition hover:scale-105 ${isFav ? "border-white bg-white/10" : "border-gray-500 bg-transparent"
+                    }`}
+                title={isFav ? "Unfollow" : "Follow"}
+            >
+                {t.logo ? (
+                    <img
+                        src={t.logo}
+                        alt={t.teamName}
+                        className="w-12 h-12 rounded-full object-cover border"
+                    />
+                ) : (
+                    <span className="inline-block w-12 h-12 rounded-full bg-gray-400" />
+                )}
+                <span className="text-sm text-center truncate">{t.teamName}</span>
+                <span className="text-lg leading-none">{isFav ? "−" : "+"}</span>
+            </button>
+        );
+    };
+
+    const TournamentChip = ({ tr }) => {
+        const isFav = favTournamentIds.has(tr.id);
+        return (
+            <button
+                onClick={() => toggleTournament(tr.id)}
+                className={`flex flex-col items-center justify-between border rounded-2xl p-3 w-28 h-36 transition hover:scale-105 ${isFav ? "border-white bg-white/10" : "border-gray-500 bg-transparent"
+                    }`}
+                title={isFav ? "Unfollow" : "Follow"}
+            >
+                {tr.image ? (
+                    <img
+                        src={tr.image}
+                        alt={tr.tournamentName}
+                        className="w-12 h-12 rounded-full object-cover border"
+                    />
+                ) : (
+                    <span className="inline-block w-12 h-12 rounded-full bg-gray-400" />
+                )}
+                <span className="text-center leading-tight max-w-[5rem] break-words text-xs sm:text-sm">
+                    {tr.tournamentName}
+                </span>
+
+                <span className="text-lg leading-none">{isFav ? "−" : "+"}</span>
+            </button>
+        );
+    };
+
+
+    const Card = ({ item }) => (
+        <article
+            className="bg-white text-black rounded-xl shadow-lg overflow-hidden transform transition hover:shadow-2xl hover:scale-105"
+        >
+            {item.imageLink ? (
+                <img
+                    src={item.imageLink}
+                    alt={item.subject}
+                    className="w-full h-48 object-cover"
+                    loading="lazy"
+                />
+            ) : null}
+            <div className="p-6">
+                <h3 className="text-xl font-semibold mb-2 cursor-pointer">{item.subject}</h3>
+                <p className="mb-4">{item.summary}</p>
+                <p className="text-sm text-gray-600">
+                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ""}
+                    {item.teamName ? ` | ${item.teamName}` : ""}
+                </p>
+            </div>
+        </article>
+    );
 
     return (
         <div className="max-w-6xl mx-auto px-6 mt-24 text-white">
-            {/* Selected Picks */}
-            <section className="mb-12">
-                <h2 className="text-3xl font-bold border-b-2 border-gray-500 pb-2 mb-4">Your Picks</h2>
+            <h1 className="text-4xl mb-6 border-b-2 border-gray-500">Cricket News & Scores</h1>
 
-                {/* Selected Teams */}
-                <div className="mb-6">
-                    <h3 className="text-xl font-semibold mb-2">Teams</h3>
-                    {favorites.length === 0 ? (
-                        <p className="text-gray-400 italic">No teams selected</p>
-                    ) : (
-                        <div className="flex space-x-6">
-                            {favorites.map(({ id, teamName, logo }) => (
-                                <div key={id} className="flex flex-col items-center cursor-pointer select-none">
-                                    {logo ? (
-                                        <img
-                                            src={logo}
-                                            alt={teamName}
-                                            className="w-16 h-16 object-cover rounded-full border-2 border-gray-500 bg-white"
-                                        />
-                                    ) : (
-                                        <div className="w-16 h-16 bg-white rounded-full border-2 border-gray-500 flex items-center justify-center text-gray-400 font-bold text-sm">
-                                            No Image
-                                        </div>
-                                    )}
-                                    <span className="mt-2 text-white font-medium">{teamName}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
+            {role === "FAN" && fan && (
+                <>
+                    <section className="mb-10">
+                        <h2 className="text-2xl font-semibold mb-3">Your Picks</h2>
 
-                {/* Selected Tournaments */}
-                <div>
-                    <h3 className="text-xl font-semibold mb-2">Tournaments</h3>
-                    {favTournaments.length === 0 ? (
-                        <p className="text-gray-400 italic">No tournaments selected</p>
-                    ) : (
-                        <div className="flex space-x-6">
-                            {favTournaments.map(({ id, tournamentName, image }) => (
-                                <div key={id} className="flex flex-col items-center cursor-pointer select-none">
-                                    {image ? (
-                                        <img
-                                            src={image}
-                                            alt={tournamentName}
-                                            className="w-16 h-16 object-cover rounded-full border-2 border-gray-500 bg-white"
-                                        />
-                                    ) : (
-                                        <div className="w-16 h-16 bg-white rounded-full border-2 border-gray-500 flex items-center justify-center text-gray-400 font-bold text-sm">
-                                            No Image
-                                        </div>
-                                    )}
-                                    <span className="mt-2 text-white font-medium">{tournamentName}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </section>
-
-            {/* Newsletters */}
-            <section>
-                <h1 className="text-4xl mb-10 border-b-2 border-gray-500">Cricket News & Scores</h1>
-                <div className="grid md:grid-cols-3 gap-10">
-                    {displayedNews.map((item) => (
-                        <article
-                            key={item.id}
-                            className="bg-white text-black rounded-xl shadow-lg overflow-hidden transform transition hover:shadow-2xl hover:scale-105"
-                        >
-                            {item.imageLink ? (
-                                <img
-                                    src={item.imageLink}
-                                    alt={item.subject}
-                                    className="w-full h-48 object-cover rounded-t-xl"
-                                    loading="lazy"
-                                />
-                            ) : null}
-                            <div className="p-6">
-                                <h2 className="text-2xl font-semibold mb-3 cursor-pointer">{item.subject}</h2>
-                                <p className="mb-4">{item.summary}</p>
-                                <p className="text-sm text-gray-500">
-                                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ""}
-                                    {item.teamName ? ` | ${item.teamName}` : ""}
-                                </p>
+                        <div className="mb-4">
+                            <h3 className="text-lg mb-2 opacity-80">Teams</h3>
+                            <div className="flex flex-wrap gap-3">
+                                {teams.length ? teams.map((t) => <TeamChip key={t.id} t={t} />) : (
+                                    <span className="text-gray-400">No teams</span>
+                                )}
                             </div>
-                        </article>
-                    ))}
-                </div>
-            </section>
+                        </div>
 
-            {/* Choose Teams */}
-            <section className="mt-20">
-                <h2 className="text-3xl font-bold border-b-2 border-gray-500 pb-2 mb-6">Choose Teams</h2>
-                <div className="flex flex-wrap gap-8">
-                    {teams.length === 0 ? (
-                        <p className="text-gray-400">No team data</p>
-                    ) : (
-                        teams.map((team) => {
-                            const isFav = favorites.some((f) => f.id === team.id);
-                            return (
-                                <div
-                                    key={team.id}
-                                    className="flex flex-col items-center cursor-pointer select-none relative group"
-                                    style={{ minWidth: "150px" }}
-                                    onClick={() => toggleFavorite(team)}
-                                >
-                                    <div className="relative">
-                                        {team.logo ? (
-                                            <img
-                                                src={team.logo}
-                                                alt={team.teamName}
-                                                className={`w-20 h-20 object-cover rounded-full border-2 ${isFav ? "border-gray-600" : "border-gray-400"
-                                                    } bg-white transition-transform duration-200 group-hover:scale-105`}
-                                            />
-                                        ) : (
-                                            <div className="w-20 h-20 bg-white rounded-full border-2 border-gray-400 flex items-center justify-center text-gray-400 font-bold text-sm">
-                                                No Image
-                                            </div>
-                                        )}
-                                        <div className="absolute inset-0 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 hover:bg-black hover:opacity-70 transition-opacity duration-300">
-                                            <span className="text-white text-4xl font-bold select-none">
-                                                {isFav ? "−" : "+"}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <span className="mt-3 text-white font-medium">{team.teamName}</span>
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
-            </section>
+                        <div>
+                            <h3 className="text-lg mb-2 opacity-80">Tournaments</h3>
+                            <div className="flex flex-wrap gap-3">
+                                {tournaments.length ? tournaments.map((tr) => <TournamentChip key={tr.id} tr={tr} />) : (
+                                    <span className="text-gray-400">No tournaments</span>
+                                )}
+                            </div>
+                        </div>
+                    </section>
 
-            {/* Choose Tournaments */}
-            <section className="mt-20">
-                <h2 className="text-3xl font-bold border-b-2 border-gray-500 pb-2 mb-6">Choose Tournaments</h2>
-                <div className="flex flex-wrap gap-8">
-                    {tournaments.length === 0 ? (
-                        <p className="text-gray-400">No tournament data</p>
-                    ) : (
-                        tournaments.map((tournament) => {
-                            const isFav = favTournaments.some((f) => f.id === tournament.id);
-                            return (
-                                <div
-                                    key={tournament.id}
-                                    className="flex flex-col items-center cursor-pointer select-none relative group"
-                                    style={{ minWidth: "150px" }}
-                                    onClick={() => toggleTournament(tournament)}
-                                >
-                                    <div className="relative">
-                                        {tournament.image ? (
-                                            <img
-                                                src={tournament.image}
-                                                alt={tournament.tournamentName}
-                                                className={`w-20 h-20 object-cover rounded-full border-2 ${isFav ? "border-gray-600" : "border-gray-400"
-                                                    } bg-white transition-transform duration-200 group-hover:scale-105`}
-                                            />
-                                        ) : (
-                                            <div className="w-20 h-20 bg-white rounded-full border-2 border-gray-400 flex items-center justify-center text-gray-400 font-bold text-sm">
-                                                No Image
-                                            </div>
-                                        )}
-                                        <div className="absolute inset-0 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 hover:bg-black hover:opacity-70 transition-opacity duration-300">
-                                            <span className="text-white text-4xl font-bold select-none">
-                                                {isFav ? "−" : "+"}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <span className="mt-3 text-white font-medium">{tournament.tournamentName}</span>
-                                </div>
-                            );
-                        })
-                    )}
+                    <section className="mb-12">
+                        <h2 className="text-2xl font-semibold mb-4">Top for You</h2>
+                        {preferred.length === 0 ? (
+                            <p className="text-gray-400">No personalized news yet. Pick some favorites above.</p>
+                        ) : (
+                            <div className="grid md:grid-cols-3 gap-8">
+                                {preferred.map((item) => <Card key={item.id} item={item} />)}
+                            </div>
+                        )}
+                    </section>
+                </>
+            )}
+
+            <section>
+                <h2 className="text-2xl font-semibold mb-4">{role === "FAN" ? "More News" : "All News"}</h2>
+                <div className="grid md:grid-cols-3 gap-8">
+                    {(role === "FAN" ? others : newsData).map((item) => <Card key={item.id} item={item} />)}
                 </div>
             </section>
         </div>
     );
-}
+};
 
 export default NewsLetter;
 

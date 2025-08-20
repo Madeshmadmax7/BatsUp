@@ -8,7 +8,8 @@ const LoginRegister = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const { setUser } = useAuth();
+  const { user, setUser } = useAuth();
+  const navigate = useNavigate();
 
   // Player fields
   const [playerData, setPlayerData] = useState({
@@ -26,12 +27,6 @@ const LoginRegister = () => {
     region: "",
   });
 
-  const navigate = useNavigate();
-  const { setRole } = useAuth(); // Using context's setRole to update role application-wide
-
-  // -----------------------------
-  // Register Logic
-  // -----------------------------
   const registerPlayer = async (userId) => {
     const response = await fetch(`http://localhost:8080/api/player/register`, {
       method: "POST",
@@ -69,7 +64,6 @@ const LoginRegister = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      // Step 1: Register User (including lastName as empty string for DB constraints)
       const userResponse = await fetch("http://localhost:8080/api/user/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -77,7 +71,7 @@ const LoginRegister = () => {
           email,
           password,
           firstName: role === "PLAYER" ? playerData.playerName : fanData.favoritePlayer,
-          lastName: "", // required by backend DB schema
+          lastName: "",
           roles: [role],
         }),
       });
@@ -86,53 +80,56 @@ const LoginRegister = () => {
         const errText = await userResponse.text();
         throw new Error("User registration failed: " + errText);
       }
-      const user = await userResponse.json();
+      const userJson = await userResponse.json();
 
-      // Step 2: Register Player or Fan details
       if (role === "PLAYER") {
-        await registerPlayer(user.id);
+        await registerPlayer(userJson.id);
       } else if (role === "FAN") {
-        await registerFan(user.id);
+        await registerFan(userJson.id);
       }
 
       alert("Registration successful!");
-      setIsRegister(false); // back to login mode
+      setIsRegister(false);
     } catch (err) {
       alert("Registration failed: " + err.message);
     }
   };
 
-  // -----------------------------
-  // Login Logic
-  // -----------------------------
   const handleLogin = async (e) => {
-  e.preventDefault();
-  try {
-    const response = await fetch("http://localhost:8080/api/user/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    e.preventDefault();
+    try {
+      const response = await fetch("http://localhost:8080/api/user/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (!response.ok) throw new Error("Login failed");
-    const user = await response.json();
+      if (!response.ok) throw new Error("Login failed");
+      const userJson = await response.json();
 
-    const userRole = user.roles?.[0] || "USER";
+      const userRole = userJson.roles?.[0] || "USER";
 
-    // Assuming user object contains id corresponding to fan/player
-    setUser({ id: user.id, role: userRole });
+      // Persist core identity
+      setUser((prev) => ({ ...prev, id: userJson.id, role: userRole }));
 
-    if (userRole === "ADMIN") navigate("/admin/tournament-list");
-    else navigate("/tournaments");
-  } catch (err) {
-    alert("Login failed: " + err.message);
-  }
-};
+      // Resolve fanId if FAN
+      if (userRole === "FAN") {
+        try {
+          const fanRes = await fetch(`http://localhost:8080/api/fan/by-user/${userJson.id}`);
+          if (fanRes.ok) {
+            const fan = await fanRes.json();
+            setUser((prev) => ({ ...prev, fanId: fan.id }));
+          }
+        } catch { /* ignore */ }
+      }
 
+      if (userRole === "ADMIN") navigate("/admin/tournament-list");
+      else navigate("/newsletter"); // route to your newsletter page
+    } catch (err) {
+      alert("Login failed: " + err.message);
+    }
+  };
 
-  // -----------------------------
-  // UI
-  // -----------------------------
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white shadow-md rounded-lg w-full max-w-md p-6">
@@ -140,7 +137,6 @@ const LoginRegister = () => {
           {isRegister ? "Register" : "Login"}
         </h2>
 
-        {/* Switch */}
         <div className="flex justify-center gap-4 mb-6">
           <button
             onClick={() => setIsRegister(false)}
@@ -161,7 +157,6 @@ const LoginRegister = () => {
         </div>
 
         <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-4 text-black">
-          {/* Common fields */}
           <input
             type="email"
             placeholder="Email"
@@ -180,7 +175,6 @@ const LoginRegister = () => {
             required
           />
 
-          {/* Register form */}
           {isRegister && (
             <>
               <select

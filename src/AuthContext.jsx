@@ -1,25 +1,37 @@
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
-export const AuthContext = createContext();
+const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
-    // Store both role and userId (fanId/playerId)
-    const [authState, setAuthState] = useState({
-        id: null,    // fanId or playerId
-        role: null,  // "FAN", "PLAYER", etc.
+export const AuthProvider = ({ children }) => {
+    const [user, setUser] = useState(() => {
+        try {
+            const raw = localStorage.getItem("auth:user");
+            return raw
+                ? JSON.parse(raw)
+                : { id: null, role: null, fanId: null, playerId: null };
+        } catch {
+            return { id: null, role: null, fanId: null, playerId: null };
+        }
     });
 
-    const setUser = ({ id, role }) => {
-        setAuthState({ id, role });
+    useEffect(() => {
+        localStorage.setItem("auth:user", JSON.stringify(user));
+    }, [user]);
+
+    const logout = () => {
+        setUser({ id: null, role: null, fanId: null, playerId: null });
+        localStorage.removeItem("auth:user");
     };
 
     return (
-        <AuthContext.Provider value={{ authState, setUser }}>
+        <AuthContext.Provider value={{ user, setUser, logout }}>
             {children}
         </AuthContext.Provider>
     );
-}
+};
 
-export function useAuth() {
-    return useContext(AuthContext);
-}
+export const useAuth = () => {
+    const ctx = useContext(AuthContext);
+    if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+    return ctx;
+};
