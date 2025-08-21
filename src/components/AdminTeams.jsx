@@ -1,1592 +1,1050 @@
-import React, { useState, useEffect } from 'react';
-import { Trash2, Plus } from "lucide-react";
+import React, { useState, useCallback } from "react";
+import TournamentManagement from "./TournamentManagement";
+import TeamManagement from "./TeamManagement";
+import ScoreManagement from "./ScoreManagement";
+import NewsletterManagement from "./NewsLetterManagement";
+import FixtureRounds from "./FixtureRounds";
+import { ErrorNote } from "./SharedComponents";
 
-const API_BASE = "http://localhost:8080";
+export default function AdminPanel() {
+    const [error, setError] = useState("");
 
-function AdminPanel() {
     const [tournaments, setTournaments] = useState([]);
     const [selectedTournament, setSelectedTournament] = useState(null);
-    const [loadingTournaments, setLoadingTournaments] = useState(false);
 
     const [teams, setTeams] = useState([]);
-    const [loadingTeams, setLoadingTeams] = useState(false);
-    const [selectedTeam, setSelectedTeam] = useState(null);
-
     const [allPlayers, setAllPlayers] = useState([]);
-    const [loadingPlayers, setLoadingPlayers] = useState(false);
 
-    const [newsletterList, setNewsletterList] = useState([]);
-    const [newsletterForm, setNewsletterForm] = useState({
-        subject: "",
-        summary: "",
-        imageLink: "",
-        tournamentId: "",
-        teamName: "",
-        content: ""
-    });
-    const [loadingNews, setLoadingNews] = useState(false);
+    const [fixtureRounds, setFixtureRounds] = useState([]);
 
-    const [tournamentForm, setTournamentForm] = useState({
-        tournamentName: "",
-        startDate: "",
-        matchType: "",
-        location: "",
-        description: "",
-        image: "",
-    });
-
-    const [scorecards, setScorecards] = useState([]);
-    const [loadingScorecards, setLoadingScorecards] = useState(false);
-    const [managingTeamId, setManagingTeamId] = useState(null);
-
-    useEffect(() => {
-        setLoadingTournaments(true);
-        fetch(`${API_BASE}/api/tournaments/get`)
-            .then(res => res.ok ? res.json() : [])
-            .then(data => {
-                setTournaments(Array.isArray(data) ? data : []);
-                setLoadingTournaments(false);
-            })
-            .catch(() => {
-                setTournaments([]);
-                setLoadingTournaments(false);
-            });
+    // Memoize onError to avoid re-creating function every render
+    const onError = useCallback((msg) => {
+        setError(msg);
     }, []);
 
-    // Fetch teams when tournament selected
-    useEffect(() => {
-        if (!selectedTournament) {
-            setTeams([]);
-            return;
-        }
-        setLoadingTeams(true);
-        fetch(`${API_BASE}/api/tournaments/${selectedTournament.id}/teams`)
-            .then(res => res.ok ? res.json() : [])
-            .then(data => {
-                setTeams(Array.isArray(data) ? data : []);
-                setLoadingTeams(false);
-            })
-            .catch(() => {
-                setTeams([]);
-                setLoadingTeams(false);
-            });
-    }, [selectedTournament]);
-
-    // Fetch all players on mount or after team changes
-    useEffect(() => {
-        setLoadingPlayers(true);
-        fetch(`${API_BASE}/api/player/all`)
-            .then(res => res.ok ? res.json() : [])
-            .then(data => {
-                setAllPlayers(Array.isArray(data) ? data : []);
-                setLoadingPlayers(false);
-            })
-            .catch(() => {
-                setAllPlayers([]);
-                setLoadingPlayers(false);
-            });
-    }, [teams]);
-
-    // === NEW: fetch scorecards (all) ===
-    const refreshScorecards = () => {
-        setLoadingScorecards(true);
-        fetch(`${API_BASE}/api/scorecard/all`)
-            .then(res => res.ok ? res.json() : [])
-            .then(data => {
-                setScorecards(Array.isArray(data) ? data : []);
-                setLoadingScorecards(false);
-            })
-            .catch(() => {
-                setScorecards([]);
-                setLoadingScorecards(false);
-            });
-    };
-    useEffect(refreshScorecards, []);
-
-    // Newsletter handlers
-    const refreshNewsletters = () => {
-        setLoadingNews(true);
-        fetch(`${API_BASE}/api/newsletter/all`)
-            .then(res => res.ok ? res.json() : [])
-            .then(data => {
-                setNewsletterList(Array.isArray(data) ? data : []);
-                setLoadingNews(false);
-            })
-            .catch(() => {
-                setNewsletterList([]);
-                setLoadingNews(false);
-            });
-    };
-    useEffect(refreshNewsletters, []);
-
-    const addNewsletter = (e) => {
-        e.preventDefault();
-        fetch(`${API_BASE}/api/newsletter/create`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newsletterForm)
-        }).then(() => {
-            setNewsletterForm({
-                subject: "",
-                summary: "",
-                imageLink: "",
-                tournamentId: "",
-                teamName: "",
-                content: ""
-            });
-            refreshNewsletters();
-        });
-    };
-
-    const deleteNewsletter = (id) => {
-        fetch(`${API_BASE}/api/newsletter/${id}`, { method: "DELETE" })
-            .then(refreshNewsletters);
-    };
-
-    // Team handlers
-    const deleteTeam = (teamId) => {
-        if (!selectedTournament?.id) return;
-        fetch(`${API_BASE}/api/tournaments/${selectedTournament.id}/remove-team/${teamId}`, { method: "DELETE" })
-            .then(() => {
-                setTeams(prev => prev.filter(t => t.id !== teamId));
-                if (selectedTeam?.id === teamId) setSelectedTeam(null);
-                fetch(`${API_BASE}/api/player/all`)
-                    .then(res => res.ok ? res.json() : [])
-                    .then(data => setAllPlayers(Array.isArray(data) ? data : []));
-                // also refresh scorecards since team removed
-                refreshScorecards();
-            });
-    };
-
-    const handleNewsletterField = (field, val) =>
-        setNewsletterForm(prev => ({ ...prev, [field]: val }));
-
-    const handleTournamentField = (field, val) =>
-        setTournamentForm(prev => ({ ...prev, [field]: val }));
-
-    const addTournament = (e) => {
-        e.preventDefault();
-        fetch(`${API_BASE}/api/tournaments/create`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(tournamentForm),
-        }).then(() =>
-            fetch(`${API_BASE}/api/tournaments/get`)
-                .then(res => res.ok ? res.json() : [])
-                .then(data => setTournaments(Array.isArray(data) ? data : []))
-        );
-        setTournamentForm({
-            tournamentName: "",
-            startDate: "",
-            matchType: "",
-            location: "",
-            description: "",
-            image: "",
-        });
-    };
-
-    // Get players of a team
-    const getPlayersOfTeam = (teamId) =>
-        allPlayers.filter(player => player.teamId === teamId);
-
-    // === NEW: Helpers for scorecards ===
-
-    // Team totals (sum of all player entries for that team)
-    const getTeamTotals = (teamId) => {
-        const entries = scorecards.filter(s => Number(s.teamId) === Number(teamId));
-        const runs = entries.reduce((acc, e) => acc + (Number(e.runs) || 0), 0);
-        const wickets = entries.reduce((acc, e) => acc + (Number(e.wickets) || 0), 0);
-        return { runs, wickets };
-    };
-
-    // Create an empty score-entry for a player under a team
-    const addPlayerScoreEntry = async ({ teamId, playerId, roundId = null }) => {
-        const payload = {
-            runs: 0,
-            wickets: 0,
-            catches: 0,
-            playerId,
-            teamId,
-            roundId
-        };
-        await fetch(`${API_BASE}/api/scorecard/create`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
-        refreshScorecards();
-    };
-
-    const updateScoreEntry = async (id, patch) => {
-        const current = scorecards.find(s => s.id === id);
-        if (!current) return;
-        const dto = {
-            id,
-            runs: patch.runs ?? current.runs,
-            wickets: patch.wickets ?? current.wickets,
-            catches: patch.catches ?? current.catches,
-            playerId: patch.playerId ?? current.playerId,
-            teamId: patch.teamId ?? current.teamId,
-            roundId: patch.roundId ?? current.roundId
-        };
-        await fetch(`${API_BASE}/api/scorecard/${id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(dto)
-        });
-        refreshScorecards();
-    };
-
-    const deleteScoreEntry = async (id) => {
-        await fetch(`${API_BASE}/api/scorecard/${id}`, { method: "DELETE" });
-        refreshScorecards();
-    };
-
-    const openManageTeam = (teamId) => setManagingTeamId(teamId);
-    const closeManageTeam = () => setManagingTeamId(null);
-
-    const managingTeam = managingTeamId
-        ? teams.find(t => t.id === managingTeamId)
-        : null;
-
-    const managingTeamPlayers = managingTeam
-        ? getPlayersOfTeam(managingTeam.id)
-        : [];
-
-    const managingTeamEntries = managingTeam
-        ? scorecards.filter(s => Number(s.teamId) === Number(managingTeam.id))
-        : [];
-
-    return (
-        <div className="p-6 max-w-7xl mx-auto bg-gray-900 min-h-screen text-white space-y-16">
-            <h1 className="text-3xl font-bold mb-8">Admin Control Panel</h1>
-
-            {/* Tournaments */}
-            <section>
-                <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">
-                    Tournaments
-                </h2>
-                {loadingTournaments ? (
-                    <p className="text-gray-300">Loading tournaments...</p>
-                ) : (
-                    <div className="flex flex-wrap gap-2 mb-6">
-                        {tournaments.length === 0 ? (
-                            <p className="text-gray-400">No tournaments found.</p>
-                        ) : (
-                            tournaments.map(t => (
-                                <button
-                                    key={t.id}
-                                    className={`px-4 py-2 rounded ${selectedTournament?.id === t.id
-                                        ? "bg-yellow-500 text-black"
-                                        : "bg-gray-700"
-                                        }`}
-                                    onClick={() => setSelectedTournament(t)}
-                                >
-                                    {t.tournamentName || t.title || t.name}
-                                </button>
-                            ))
-                        )}
-                    </div>
-                )}
-            </section>
-
-            {/* Registered Teams */}
-            <section>
-                <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">
-                    Registered Teams{" "}
-                    {selectedTournament
-                        ? `for "${selectedTournament.tournamentName || selectedTournament.title || selectedTournament.name}"`
-                        : ""}
-                </h2>
-                {loadingTeams ? (
-                    <p className="text-gray-300">Loading teams...</p>
-                ) : selectedTournament ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {teams.length === 0 ? (
-                            <p className="text-gray-400 italic col-span-full">No teams found.</p>
-                        ) : (
-                            teams.map(team => (
-                                <div
-                                    key={team.id}
-                                    className="bg-gray-800 p-4 rounded-lg border border-gray-700 relative"
-                                >
-                                    <button
-                                        title="Delete Team"
-                                        className="absolute top-2 right-2 text-gray-400 hover:text-red-600"
-                                        onClick={() => deleteTeam(team.id)}
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
-                                    <h3 className="text-lg font-semibold mb-1">{team.name}</h3>
-                                    <p className="text-sm text-gray-400">Location: {team.location || "N/A"}</p>
-                                    <p className="text-sm text-gray-400">Phone: {team.phone || "N/A"}</p>
-                                    <p className="text-sm text-gray-400 mb-2">
-                                        Players: {getPlayersOfTeam(team.id).length}
-                                    </p>
-                                    <button
-                                        onClick={() => setSelectedTeam(team)}
-                                        className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm"
-                                    >
-                                        View Players
-                                    </button>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                ) : (
-                    <p className="text-gray-400 italic">Select a tournament to view teams.</p>
-                )}
-
-                {/* Players modal */}
-                {selectedTeam && (
-                    <div
-                        className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
-                        onClick={() => setSelectedTeam(null)}
-                    >
-                        <div
-                            className="bg-gray-800 p-6 rounded-lg max-w-md w-full"
-                            onClick={e => e.stopPropagation()}
-                        >
-                            <h3 className="text-2xl font-semibold mb-4">{selectedTeam.name} - Players</h3>
-                            {loadingPlayers ? (
-                                <p className="text-gray-300">Loading players...</p>
-                            ) : getPlayersOfTeam(selectedTeam.id).length === 0 ? (
-                                <p className="text-gray-400 italic mb-4">No players in this team.</p>
-                            ) : (
-                                <ul className="space-y-2 max-h-60 overflow-y-auto">
-                                    {getPlayersOfTeam(selectedTeam.id).map(player => (
-                                        <li
-                                            key={player.id}
-                                            className="flex justify-between items-center border-b border-gray-700 pb-2"
-                                        >
-                                            <span>
-                                                #{player.jerseyNumber} - {player.nickname}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                            <button
-                                onClick={() => setSelectedTeam(null)}
-                                className="mt-6 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </section>
-
-            {/* === NEW: SCORECARD MANAGEMENT === */}
-            <section>
-                <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">
-                    Score Management
-                </h2>
-
-                {!selectedTournament ? (
-                    <p className="text-gray-400 italic">Select a tournament to manage team scorecards.</p>
-                ) : loadingTeams || loadingPlayers || loadingScorecards ? (
-                    <p className="text-gray-300">Loading scorecards...</p>
-                ) : teams.length === 0 ? (
-                    <p className="text-gray-400 italic">No teams in this tournament.</p>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {teams.map(team => {
-                            const totals = getTeamTotals(team.id);
-                            return (
-                                <div key={team.id} className="bg-gray-800 p-4 rounded-lg border border-gray-700 flex flex-col">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <h3 className="text-lg font-semibold">{team.name}</h3>
-                                        <button
-                                            className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm"
-                                            onClick={() => openManageTeam(team.id)}
-                                        >
-                                            Manage
-                                        </button>
-                                    </div>
-                                    <p className="text-sm text-gray-400 mb-1">Location: {team.location || "-"}</p>
-                                    <p className="text-sm text-gray-200">
-                                        Score: {totals.runs} / {totals.wickets}
-                                    </p>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-
-                {managingTeam && (
-                    <ScoreManagementPopup
-                        team={managingTeam}
-                        players={managingTeamPlayers}
-                        entries={managingTeamEntries}
-                        onAddEntry={(playerId) => addPlayerScoreEntry({ teamId: managingTeam.id, playerId })}
-                        onUpdateEntry={updateScoreEntry}
-                        onDeleteEntry={deleteScoreEntry}
-                        onClose={closeManageTeam}
-                    />
-                )}
-            </section>
-
-            {/* Newsletter Management */}
-            <section>
-                <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">
-                    Newsletter Management
-                </h2>
-                <form
-                    onSubmit={addNewsletter}
-                    className="bg-gray-800 p-5 rounded-lg max-w-xl space-y-4"
-                >
-                    <input
-                        type="text"
-                        placeholder="Subject *"
-                        value={newsletterForm.subject}
-                        onChange={e => handleNewsletterField("subject", e.target.value)}
-                        className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-                        required
-                    />
-                    <input
-                        type="text"
-                        placeholder="Summary *"
-                        value={newsletterForm.summary}
-                        onChange={e => handleNewsletterField("summary", e.target.value)}
-                        className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-                        required
-                    />
-                    <input
-                        type="text"
-                        placeholder="Image Link"
-                        value={newsletterForm.imageLink}
-                        onChange={e => handleNewsletterField("imageLink", e.target.value)}
-                        className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-                    />
-
-                    {/* Tournament selector */}
-                    <select
-                        value={newsletterForm.tournamentId}
-                        onChange={e => {
-                            const val = e.target.value;
-                            handleNewsletterField("tournamentId", val === "" ? "" : Number(val));
-                            const selTournament = tournaments.find(t => t.id === Number(val));
-                            setSelectedTournament(selTournament || null);
-                        }}
-                        className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-                    >
-                        <option value="">Select Tournament (optional)</option>
-                        {tournaments.map(t => (
-                            <option key={t.id} value={t.id}>
-                                {t.tournamentName || t.title || t.name}
-                            </option>
-                        ))}
-                    </select>
-
-                    {/* Team selector based on selected tournament */}
-                    <select
-                        value={newsletterForm.teamName}
-                        onChange={e => handleNewsletterField("teamName", e.target.value)}
-                        className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-                        disabled={!selectedTournament || teams.length === 0}
-                    >
-                        <option value="">Select Team (optional)</option>
-                        {teams.map(team => (
-                            <option key={team.id} value={team.name}>
-                                {team.name}
-                            </option>
-                        ))}
-                    </select>
-
-                    <textarea
-                        placeholder="Content *"
-                        value={newsletterForm.content}
-                        onChange={e => handleNewsletterField("content", e.target.value)}
-                        required
-                        rows={4}
-                        className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-                    />
-                    <button
-                        type="submit"
-                        className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white"
-                    >
-                        Publish News
-                    </button>
-                </form>
-                <div className="mt-6 grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    {loadingNews ? (
-                        <p className="text-gray-400 italic">Loading newsletters...</p>
-                    ) : newsletterList.length === 0 ? (
-                        <p className="text-gray-400 italic">No newsletters found.</p>
-                    ) : (
-                        newsletterList.map(nw => (
-                            <article
-                                key={nw.id}
-                                className="bg-white rounded-lg shadow-lg p-5 text-gray-900 relative"
-                            >
-                                <button
-                                    className="absolute top-2 right-2 text-red-600"
-                                    onClick={() => deleteNewsletter(nw.id)}
-                                    title="Delete Newsletter"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                                {nw.imageLink && (
-                                    <img
-                                        src={nw.imageLink}
-                                        alt={nw.subject}
-                                        className="w-full h-40 object-cover rounded mb-4"
-                                    />
-                                )}
-                                <h3 className="text-xl font-semibold">{nw.subject}</h3>
-                                <p className="text-sm font-medium text-gray-600 mb-1">
-                                    Tournament ID: {nw.tournamentId || "N/A"} | Team: {nw.teamName || "N/A"}
-                                </p>
-                                <p className="mb-2">{nw.summary}</p>
-                                <p className="mb-2">{nw.content}</p>
-                            </article>
-                        ))
-                    )}
-                </div>
-            </section>
-
-            {/* Tournament Create Form */}
-            <section>
-                <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">
-                    Create Tournament
-                </h2>
-                <form
-                    onSubmit={addTournament}
-                    className="bg-gray-800 p-5 rounded-lg max-w-xl space-y-4"
-                >
-                    <input
-                        type="text"
-                        placeholder="Title *"
-                        value={tournamentForm.tournamentName}
-                        onChange={e => handleTournamentField("tournamentName", e.target.value)}
-                        className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-                        required
-                    />
-                    <input
-                        type="date"
-                        placeholder="Date *"
-                        value={tournamentForm.startDate}
-                        onChange={e => handleTournamentField("startDate", e.target.value)}
-                        className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-                        required
-                    />
-                    <input
-                        type="text"
-                        placeholder="Type (e.g. Adult, Under19) *"
-                        value={tournamentForm.matchType}
-                        onChange={e => handleTournamentField("matchType", e.target.value)}
-                        className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-                        required
-                    />
-                    <input
-                        type="text"
-                        placeholder="Location *"
-                        value={tournamentForm.location}
-                        onChange={e => handleTournamentField("location", e.target.value)}
-                        className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-                        required
-                    />
-                    <textarea
-                        placeholder="Description (optional)"
-                        value={tournamentForm.description}
-                        onChange={e => handleTournamentField("description", e.target.value)}
-                        rows={3}
-                        className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-                    />
-                    <input
-                        type="text"
-                        placeholder="Image Link"
-                        value={tournamentForm.image}
-                        onChange={e => handleTournamentField("image", e.target.value)}
-                        className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-                    />
-                    <button
-                        type="submit"
-                        className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white"
-                    >
-                        Create Tournament
-                    </button>
-                </form>
-            </section>
-        </div>
-    );
-}
-
-export default AdminPanel;
-
-
-function ScoreManagementPopup({
-    team,
-    players,
-    entries,
-    onAddEntry,
-    onUpdateEntry,
-    onDeleteEntry,
-    onClose,
-}) {
-    if (!team) return null;
-
-    const totals = {
-        runs: entries.reduce((a, e) => a + (Number(e.runs) || 0), 0),
-        wickets: entries.reduce((a, e) => a + (Number(e.wickets) || 0), 0),
-        catches: entries.reduce((a, e) => a + (Number(e.catches) || 0), 0),
-    };
-
-    // players not yet added to this scorecard
-    const usedPlayerIds = new Set(entries.map(e => Number(e.playerId)));
-    const availablePlayers = players.filter(p => !usedPlayerIds.has(Number(p.id)));
-
-    const playerName = (playerId) => {
-        const p = players.find(pp => Number(pp.id) === Number(playerId));
-        return p ? (p.nickname || p.name || `#${p.jerseyNumber}`) : "Unknown";
+    const handleTournamentSelect = (tournament) => {
+        setSelectedTournament(tournament);
+        setFixtureRounds([]);
+        setTeams([]);
+        setAllPlayers([]);
     };
 
     return (
-        <div
-            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
-            onClick={onClose}
-        >
-            <div
-                className="bg-gray-800 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-bold">{team.name} — Score Management</h2>
-                    <button onClick={onClose} className="text-sm bg-green-600 hover:bg-green-700 px-3 py-1 rounded">
-                        Save & Close
-                    </button>
-                </div>
+        <div className="p-6 max-w-7xl mx-auto bg-black min-h-screen text-white space-y-10">
+            <header className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold">Admin Control Panel</h1>
+            </header>
 
-                {/* Quick totals */}
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                    <div className="bg-gray-700 rounded p-3 text-center">
-                        <div className="text-xs text-gray-300">Team Runs</div>
-                        <div className="text-xl font-semibold">{totals.runs}</div>
-                    </div>
-                    <div className="bg-gray-700 rounded p-3 text-center">
-                        <div className="text-xs text-gray-300">Team Wickets</div>
-                        <div className="text-xl font-semibold">{totals.wickets}</div>
-                    </div>
-                    <div className="bg-gray-700 rounded p-3 text-center">
-                        <div className="text-xs text-gray-300">Team Catches</div>
-                        <div className="text-xl font-semibold">{totals.catches}</div>
-                    </div>
-                </div>
+            <ErrorNote message={error} />
 
-                {/* Add player to scorecard */}
-                <div className="mb-6">
-                    <label className="block text-sm text-gray-300 mb-2">Add Player to Scorecard</label>
-                    <div className="flex gap-3">
-                        <select
-                            id="add-player-select"
-                            className="bg-gray-700 p-2 rounded text-white flex-1"
-                            defaultValue=""
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                if (!val) return;
-                                onAddEntry(Number(val));
-                                e.target.value = "";
-                            }}
-                        >
-                            <option value="">Select player...</option>
-                            {availablePlayers.map(p => (
-                                <option key={p.id} value={p.id}>
-                                    #{p.jerseyNumber} — {p.nickname || p.name}
-                                </option>
-                            ))}
-                        </select>
-                        <button
-                            onClick={() => {
-                                const sel = document.getElementById("add-player-select");
-                                if (sel && sel.value) {
-                                    onAddEntry(Number(sel.value));
-                                    sel.value = "";
-                                }
-                            }}
-                            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded"
-                        >
-                            <Plus size={16} /> Add
-                        </button>
-                    </div>
-                    {availablePlayers.length === 0 && (
-                        <p className="mt-2 text-xs text-gray-400">All team players already added to this scorecard.</p>
-                    )}
-                </div>
+            <TournamentManagement
+                selectedTournament={selectedTournament}
+                onTournamentSelect={handleTournamentSelect}
+                onError={onError}
+            />
 
-                {/* Batting (Runs) */}
-                <div className="mb-8">
-                    <h3 className="text-lg font-semibold mb-2 text-white">Batting</h3>
-                    <table className="w-full text-sm text-white table-auto mb-3 border-collapse border border-gray-600">
-                        <thead>
-                            <tr>
-                                <th className="border border-gray-600 px-2 py-1 text-left">Player</th>
-                                <th className="border border-gray-600 px-2 py-1 text-center">Runs</th>
-                                <th className="border border-gray-600 px-2 py-1 text-center">Catches</th>
-                                <th className="border border-gray-600 px-2 py-1 text-center">Delete</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {entries.length === 0 ? (
-                                <tr>
-                                    <td className="border border-gray-700 px-2 py-2 text-gray-400" colSpan={4}>
-                                        No players added yet.
-                                    </td>
-                                </tr>
-                            ) : (
-                                entries.map((e) => (
-                                    <tr key={e.id}>
-                                        <td className="border border-gray-700 px-2 py-1">{playerName(e.playerId)}</td>
-                                        <td className="border border-gray-700 px-2 py-1 text-center">
-                                            <input
-                                                type="number"
-                                                value={e.runs ?? 0}
-                                                onChange={(ev) => onUpdateEntry(e.id, { runs: Number(ev.target.value) })}
-                                                className="bg-gray-700 w-24 p-1 rounded text-white text-center"
-                                            />
-                                        </td>
-                                        <td className="border border-gray-700 px-2 py-1 text-center">
-                                            <input
-                                                type="number"
-                                                value={e.catches ?? 0}
-                                                onChange={(ev) => onUpdateEntry(e.id, { catches: Number(ev.target.value) })}
-                                                className="bg-gray-700 w-24 p-1 rounded text-white text-center"
-                                            />
-                                        </td>
-                                        <td className="border border-gray-700 px-2 py-1 text-center">
-                                            <button
-                                                className="text-red-500 hover:text-red-600"
-                                                title="Delete Player Entry"
-                                                onClick={() => onDeleteEntry(e.id)}
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+            <TeamManagement
+                selectedTournament={selectedTournament}
+                onError={onError}
+                onTeamsChange={setTeams}
+                onPlayersChange={setAllPlayers}
+            />
 
-                {/* Bowling (Wickets) */}
-                <div className="mb-2">
-                    <h3 className="text-lg font-semibold mb-2 text-white">Bowling</h3>
-                    <table className="w-full text-sm text-white table-auto mb-3 border-collapse border border-gray-600">
-                        <thead>
-                            <tr>
-                                <th className="border border-gray-600 px-2 py-1 text-left">Player</th>
-                                <th className="border border-gray-600 px-2 py-1 text-center">Wickets</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {entries.length === 0 ? (
-                                <tr>
-                                    <td className="border border-gray-700 px-2 py-2 text-gray-400" colSpan={2}>
-                                        No players added yet.
-                                    </td>
-                                </tr>
-                            ) : (
-                                entries.map((e) => (
-                                    <tr key={e.id}>
-                                        <td className="border border-gray-700 px-2 py-1">{playerName(e.playerId)}</td>
-                                        <td className="border border-gray-700 px-2 py-1 text-center">
-                                            <input
-                                                type="number"
-                                                value={e.wickets ?? 0}
-                                                onChange={(ev) => onUpdateEntry(e.id, { wickets: Number(ev.target.value) })}
-                                                className="bg-gray-700 w-24 p-1 rounded text-white text-center"
-                                            />
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+            <ScoreManagement
+                fixtureRounds={fixtureRounds}
+                teams={teams}
+                allPlayers={allPlayers}
+                onError={onError}
+            />
 
-                <div className="flex justify-end mt-6">
-                    <button
-                        onClick={onClose}
-                        className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
-                    >
-                        Save & Close
-                    </button>
-                </div>
-            </div>
+            <NewsletterManagement
+                tournaments={tournaments}
+                teams={teams}
+                selectedTournament={selectedTournament}
+                onTournamentSelect={handleTournamentSelect}
+                onError={onError}
+            />
+
+            <FixtureRounds
+                selectedTournament={selectedTournament}
+                fixtureRounds={fixtureRounds}
+                setFixtureRounds={setFixtureRounds}
+                onError={onError}
+            />
+
+            <footer className="py-8 text-center text-gray-500 text-sm">
+                Admin Console — Cricket Manager
+            </footer>
         </div>
     );
 }
 
 
+// // import React, { useState, useEffect } from "react";
+// // import { useAuth } from "../AuthContext";
+// // import ScoreSection from "./ScoreSection";
+// // import TournamentSection from "./TournamentSection";
+// // import NewsletterSection from "./NewsletterSection";
+// // import FixturesSection from "./FixturesSection";
+// // import ManagementSection from "./ManagementSection";
 
-// import React, { useState } from "react";
-// import { Trash2, Plus } from "lucide-react";
+// // const AdminTeams = () => {
+// //     const { user } = useAuth();
+// //     const [teams, setTeams] = useState([]);
 
-// const emptyScoreCard = {
-// id: null,
-// name: "",
-// location: "",
-// score: "",
-// wickets: "",
-// overs: "",
-// batting: [],
-// bowling: [],
-// lastOverBalls: Array(6).fill(""),
-// players: [],
-// logo: null,
-// };
+// //     useEffect(() => {
+// //         // fetch teams API logic
+// //         const fetchTeams = async () => {
+// //             try {
+// //                 const res = await fetch("http://localhost:8080/api/team");
+// //                 const data = await res.json();
+// //                 setTeams(data);
+// //             } catch (err) {
+// //                 console.error("Error fetching teams:", err);
+// //             }
+// //         };
+// //         fetchTeams();
+// //     }, []);
 
-// const initialRegisteredTeams = [
-// {
-//     id: 1,
-//     name: "Warriors",
-//     location: "Mumbai",
-//     phone: "9876543210",
-//     logo: null,
-//     password: "team123",
-//     players: [
-//     { id: 1, name: "John", jersey: 7 },
-//     { id: 2, name: "David", jersey: 12 },
-//     { id: 3, name: "Mark", jersey: 30 },
-//     ],
-// },
-// {
-//     id: 2,
-//     name: "Strikers",
-//     location: "Delhi",
-//     phone: "9123456780",
-//     logo: null,
-//     password: "striker123",
-//     players: [
-//     { id: 4, name: "Alex", jersey: 99 },
-//     { id: 5, name: "Mike", jersey: 15 },
-//     ],
-// },
-// ];
+// //     return (
+// //         <div className="p-6 space-y-8">
+// //             <h1 className="text-2xl font-bold">Admin Dashboard</h1>
 
-// const initialScoreCards = [
-// {
-//     id: 100,
-//     name: "Titans",
-//     location: "Chennai",
-//     logo: null,
-//     score: "",
-//     wickets: "",
-//     overs: "",
-//     batting: [],
-//     bowling: [],
-//     lastOverBalls: Array(6).fill(""),
-//     players: [],
-// },
-// ];
+// //             {/* Teams list (still inside parent) */}
+// //             <div>
+// //                 <h2 className="text-xl font-semibold mb-4">Teams</h2>
+// //                 <ul className="space-y-2">
+// //                     {teams.map((team) => (
+// //                         <li key={team.id} className="border p-3 rounded-lg">
+// //                             {team.name}
+// //                         </li>
+// //                     ))}
+// //                 </ul>
+// //             </div>
 
-// export default function AdminPanel() {
-// const [registeredTeams, setRegisteredTeams] = useState(initialRegisteredTeams);
-// const [selectedTeam, setSelectedTeam] = useState(null);
+// //             {/* Child components */}
+// //             <ScoreSection />
+// //             <TournamentSection />
+// //             <NewsletterSection />
+// //             <FixturesSection />
+// //             <ManagementSection />
+// //         </div>
+// //     );
+// // };
 
-// const [scoreCards, setScoreCards] = useState(initialScoreCards);
-// const [selectedScoreTeamId, setSelectedScoreTeamId] = useState(null);
+// // export default AdminTeams;
 
-// // 3. Newsletter
-// const [newsList, setNewsList] = useState([]);
-// const [newsForm, setNewsForm] = useState({
-//     team: "",
-//     imageLink: "",
-//     headline: "",
-//     summary: "",
-//     score: "",
-//     link: "",
-// });
 
-// // 4. Tournament Creation
-// const [tournaments, setTournaments] = useState([]);
-// const [newTournament, setNewTournament] = useState({
-//     image: "",
-//     title: "",
-//     date: "",
-//     type: "",
-//     location: "",
-//     description: "",
-// });
+// import React, { useEffect, useMemo, useState } from "react";
+// import { Trash2, Plus, RefreshCw, AlertCircle, X } from "lucide-react";
+// import axios from "axios";
 
-// // --- Team Management handlers ---
-// const deleteRegisteredTeam = (teamId) => {
-//     setRegisteredTeams((prev) => prev.filter((team) => team.id !== teamId));
-// };
+// const API_BASE = "http://localhost:8080"; // update if needed
 
-// const deletePlayerFromTeam = (teamId, playerId) => {
-//     setRegisteredTeams((prev) =>
-//     prev.map((team) =>
-//         team.id === teamId
-//         ? { ...team, players: team.players.filter((p) => p.id !== playerId) }
-//         : team
-//     )
-//     );
-// };
-
-// // --- Score Management handlers ---
-// const addScoreCard = () => {
-//     const newId = scoreCards.length > 0 ? Math.max(...scoreCards.map((c) => c.id)) + 1 : 100;
-//     const newCard = { ...emptyScoreCard, id: newId, name: `New Team ${newId}` };
-//     setScoreCards((prev) => [...prev, newCard]);
-// };
-
-// const updateScoreCardField = (teamId, field, value) => {
-//     setScoreCards((prev) =>
-//     prev.map((card) => (card.id === teamId ? { ...card, [field]: value } : card))
-//     );
-// };
-
-// const updateLastOverBall = (teamId, index, value) => {
-//     setScoreCards((prev) =>
-//     prev.map((card) =>
-//         card.id === teamId
-//         ? {
-//             ...card,
-//             lastOverBalls: card.lastOverBalls.map((b, i) => (i === index ? value : b)),
-//             }
-//         : card
-//     )
-//     );
-// };
-
-// const updateBattingPlayer = (teamId, idx, field, value) => {
-//     setScoreCards((prev) =>
-//     prev.map((card) =>
-//         card.id === teamId
-//         ? {
-//             ...card,
-//             batting: card.batting.map((b, i) => (i === idx ? { ...b, [field]: value } : b)),
-//             }
-//         : card
-//     )
-//     );
-// };
-
-// const updateBowlingPlayer = (teamId, idx, field, value) => {
-//     setScoreCards((prev) =>
-//     prev.map((card) =>
-//         card.id === teamId
-//         ? {
-//             ...card,
-//             bowling: card.bowling.map((b, i) => (i === idx ? { ...b, [field]: value } : b)),
-//             }
-//         : card
-//     )
-//     );
-// };
-
-// const addBattingPlayer = (teamId) => {
-//     setScoreCards((prev) =>
-//     prev.map((card) =>
-//         card.id === teamId
-//         ? {
-//             ...card,
-//             batting: [...card.batting, { name: "", runs: "", balls: "", fours: "", sixes: "", sr: "" }],
-//             }
-//         : card
-//     )
-//     );
-// };
-
-// const addBowlingPlayer = (teamId) => {
-//     setScoreCards((prev) =>
-//     prev.map((card) =>
-//         card.id === teamId
-//         ? {
-//             ...card,
-//             bowling: [...card.bowling, { name: "", overs: "", runs: "", wickets: "", econ: "" }],
-//             }
-//         : card
-//     )
-//     );
-// };
-
-// const deleteScoreCard = (teamId) => {
-//     setScoreCards((prev) => prev.filter((c) => c.id !== teamId));
-// };
-
-// // --- Newsletter handlers ---
-// const handleNewsFormChange = (field, value) => {
-//     setNewsForm((prev) => ({ ...prev, [field]: value }));
-// };
-
-// const submitNews = (e) => {
-//     e.preventDefault();
-//     if (!newsForm.team || !newsForm.headline || !newsForm.summary) {
-//     alert("Please fill in required fields (Team, Headline, Summary)");
-//     return;
-//     }
-//     const newEntry = {
-//     id: Date.now(),
-//     team: newsForm.team,
-//     teamImg: newsForm.imageLink || null,
-//     headline: newsForm.headline,
-//     summary: newsForm.summary,
-//     score: newsForm.score || null,
-//     link: newsForm.link || null,
-//     };
-//     setNewsList((prev) => [newEntry, ...prev]);
-//     setNewsForm({ team: "", imageLink: "", headline: "", summary: "", score: "", link: "" });
-// };
-
-// // --- Tournament Creation handlers ---
-// const handleTournamentChange = (field, value) => {
-//     setNewTournament((prev) => ({ ...prev, [field]: value }));
-// };
-
-// const submitTournament = (e) => {
-//     e.preventDefault();
-//     if (!newTournament.title || !newTournament.date || !newTournament.type || !newTournament.location) {
-//     alert("Please fill in required fields: Title, Date, Type, Location");
-//     return;
-//     }
-//     const tournamentEntry = { id: Date.now(), ...newTournament };
-//     setTournaments((prev) => [tournamentEntry, ...prev]);
-//     setNewTournament({
-//     image: "",
-//     title: "",
-//     date: "",
-//     type: "",
-//     location: "",
-//     description: "",
-//     });
-// };
-
-// const selectedScoreTeam = scoreCards.find((c) => c.id === selectedScoreTeamId);
-
-// return (
-//     <div className="p-6 max-w-7xl mx-auto bg-gray-900 min-h-screen text-white space-y-16">
-//     <h1 className="text-3xl font-bold mb-8">Admin Control Panel</h1>
-
-//     {/* --- 1. TEAM MANAGEMENT --- */}
-//     <section>
-//         <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">Team Management</h2>
-//         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-//         {registeredTeams.length === 0 ? (
-//             <p className="text-gray-400 italic col-span-full">No registered teams.</p>
-//         ) : (
-//             registeredTeams.map((team) => (
-//             <div key={team.id} className="bg-gray-800 p-4 rounded-lg border border-gray-700 relative">
-//                 <button
-//                 title="Delete Team"
-//                 className="absolute top-2 right-2 text-gray-400 hover:text-red-600"
-//                 onClick={() => deleteRegisteredTeam(team.id)}
-//                 >
-//                 <Trash2 size={18} />
-//                 </button>
-//                 <h3 className="text-lg font-semibold mb-1">{team.name}</h3>
-//                 <p className="text-sm text-gray-400">Location: {team.location}</p>
-//                 <p className="text-sm text-gray-400">Phone: {team.phone}</p>
-//                 <p className="text-sm text-gray-400 mb-2">Players: {team.players.length}</p>
-//                 <button
-//                 onClick={() => setSelectedTeam(team)}
-//                 className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm"
-//                 >
-//                 View Players
-//                 </button>
-//             </div>
-//             ))
-//         )}
-//         </div>
-
-//         {/* Players Popup */}
-//         {selectedTeam && (
-//         <div
-//             className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
-//             onClick={() => setSelectedTeam(null)}
-//         >
-//             <div
-//             className="bg-gray-800 p-6 rounded-lg max-w-md w-full"
-//             onClick={(e) => e.stopPropagation()}
-//             >
-//             <h3 className="text-2xl font-semibold mb-4">{selectedTeam.name} - Players</h3>
-//             {selectedTeam.players.length === 0 ? (
-//                 <p className="text-gray-400 italic mb-4">No players in this team.</p>
-//             ) : (
-//                 <ul className="space-y-2 max-h-60 overflow-y-auto">
-//                 {selectedTeam.players.map((player) => (
-//                     <li
-//                     key={player.id}
-//                     className="flex justify-between items-center border-b border-gray-700 pb-2"
-//                     >
-//                     <span>
-//                         #{player.jersey} - {player.name}
-//                     </span>
-//                     <button
-//                         onClick={() => deletePlayerFromTeam(selectedTeam.id, player.id)}
-//                         className="text-red-500 hover:text-red-600"
-//                         title="Delete Player"
-//                     >
-//                         <Trash2 size={18} />
-//                     </button>
-//                     </li>
-//                 ))}
-//                 </ul>
-//             )}
-//             <button
-//                 onClick={() => setSelectedTeam(null)}
-//                 className="mt-6 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
-//             >
-//                 Close
-//             </button>
-//             </div>
-//         </div>
-//         )}
-//     </section>
-
-//     {/* --- 2. SCORE MANAGEMENT --- */}
-//     <section>
-//         <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">Score Management</h2>
-//         <button
-//         onClick={addScoreCard}
-//         className="mb-6 flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded inline-flex"
-//         title="Add New Score Card"
-//         >
-//         <Plus size={16} /> Add New Score Card
-//         </button>
-//         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-//         {scoreCards.length === 0 ? (
-//             <p className="text-gray-400 italic col-span-full">No live score cards.</p>
-//         ) : (
-//             scoreCards.map((card) => (
-//             <div key={card.id} className="bg-gray-800 p-4 rounded-lg border border-gray-700 flex flex-col">
-//                 <div className="flex justify-between items-center mb-3">
-//                 <h3 className="text-lg font-semibold">{card.name || "Unnamed Team"}</h3>
-//                 <button
-//                     className="text-red-600 hover:text-red-800"
-//                     title="Delete Score Card"
-//                     onClick={() => deleteScoreCard(card.id)}
-//                 >
-//                     <Trash2 size={18} />
-//                 </button>
-//                 </div>
-//                 <p className="text-sm text-gray-400 mb-1">Location: {card.location || "-"}</p>
-//                 <p className="text-sm text-gray-200">
-//                 Score: {card.score || "-"} / {card.wickets || "-"} &nbsp;&nbsp; Overs: {card.overs || "-"}
-//                 </p>
-//                 <button
-//                 onClick={() => setSelectedScoreTeamId(card.id)}
-//                 className="mt-auto bg-green-600 px-3 py-1 rounded text-sm hover:bg-green-700"
-//                 >
-//                 Manage Details
-//                 </button>
-//             </div>
-//             ))
-//         )}
-//         </div>
-
-//         {/* Score Management Popup */}
-//         {selectedScoreTeam && (
-//         <ScoreManagementPopup
-//             team={selectedScoreTeam}
-//             onClose={() => setSelectedScoreTeamId(null)}
-//             onScoreChange={updateScoreCardField}
-//             onLastOverChange={updateLastOverBall}
-//             onBattingChange={updateBattingPlayer}
-//             onBowlingChange={updateBowlingPlayer}
-//             addBattingPlayer={addBattingPlayer}
-//             addBowlingPlayer={addBowlingPlayer}
-//         />
-//         )}
-//     </section>
-
-//     {/* --- 3. NEWSLETTER MANAGEMENT --- */}
-//     <section>
-//         <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">Newsletter Management</h2>
-//         <form onSubmit={submitNews} className="bg-gray-800 p-5 rounded-lg max-w-xl space-y-4">
-//         <input
-//             type="text"
-//             placeholder="Team Name *"
-//             value={newsForm.team}
-//             onChange={(e) => handleNewsFormChange("team", e.target.value)}
-//             className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-//             required
-//         />
-//         <input
-//             type="text"
-//             placeholder="Image Link (S3 or URL)"
-//             value={newsForm.imageLink}
-//             onChange={(e) => handleNewsFormChange("imageLink", e.target.value)}
-//             className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-//         />
-//         <input
-//             type="text"
-//             placeholder="Headline *"
-//             value={newsForm.headline}
-//             onChange={(e) => handleNewsFormChange("headline", e.target.value)}
-//             className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-//             required
-//         />
-//         <textarea
-//             placeholder="Summary *"
-//             value={newsForm.summary}
-//             onChange={(e) => handleNewsFormChange("summary", e.target.value)}
-//             rows={3}
-//             className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-//             required
-//         />
-//         <input
-//             type="text"
-//             placeholder="Score (optional)"
-//             value={newsForm.score}
-//             onChange={(e) => handleNewsFormChange("score", e.target.value)}
-//             className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-//         />
-//         <input
-//             type="text"
-//             placeholder="Read More Link (optional)"
-//             value={newsForm.link}
-//             onChange={(e) => handleNewsFormChange("link", e.target.value)}
-//             className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-//         />
-//         <button type="submit" className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white">
-//             Publish News
-//         </button>
-//         </form>
-
-//         {newsList.length > 0 && (
-//         <div className="mt-6 grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-//             {newsList.map(({ id, team, teamImg, headline, summary, score, link }) => (
-//             <article key={id} className="bg-white rounded-lg shadow-lg p-5 text-gray-900">
-//                 {teamImg && <img src={teamImg} alt={team} className="w-full h-40 object-cover rounded mb-4" />}
-//                 <h3 className="text-xl font-semibold">{headline}</h3>
-//                 <p className="text-sm font-medium text-gray-600 mb-1">{team}</p>
-//                 <p className="mb-2">{summary}</p>
-//                 {score && (
-//                 <p className="inline-block bg-gray-200 text-gray-800 font-semibold text-sm px-3 py-1 rounded-lg mb-2">
-//                     Score: {score}
-//                 </p>
-//                 )}
-//                 {link && (
-//                 <a href={link} target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">
-//                     Read More →
-//                 </a>
-//                 )}
-//             </article>
-//             ))}
-//         </div>
-//         )}
-//     </section>
-
-//     {/* --- 4. TOURNAMENT CREATION --- */}
-//     <section className="mb-12">
-//         <h2 className="text-2xl font-semibold border-b border-gray-600 pb-1 mb-6">Create Tournament</h2>
-//         <form onSubmit={submitTournament} className="bg-gray-800 p-5 rounded-lg max-w-xl space-y-4">
-//         <input
-//             type="text"
-//             placeholder="Image Link (S3 URL) *"
-//             value={newTournament.image}
-//             onChange={(e) => handleTournamentChange("image", e.target.value)}
-//             className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-//             required
-//         />
-//         <input
-//             type="text"
-//             placeholder="Title *"
-//             value={newTournament.title}
-//             onChange={(e) => handleTournamentChange("title", e.target.value)}
-//             className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-//             required
-//         />
-//         <input
-//             type="date"
-//             placeholder="Date *"
-//             value={newTournament.date}
-//             onChange={(e) => handleTournamentChange("date", e.target.value)}
-//             className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-//             required
-//         />
-//         <input
-//             type="text"
-//             placeholder="Type (e.g. Adult, Under19) *"
-//             value={newTournament.type}
-//             onChange={(e) => handleTournamentChange("type", e.target.value)}
-//             className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-//             required
-//         />
-//         <input
-//             type="text"
-//             placeholder="Location *"
-//             value={newTournament.location}
-//             onChange={(e) => handleTournamentChange("location", e.target.value)}
-//             className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-//             required
-//         />
-//         <textarea
-//             placeholder="Description (optional)"
-//             value={newTournament.description}
-//             onChange={(e) => handleTournamentChange("description", e.target.value)}
-//             rows={3}
-//             className="w-full bg-gray-700 px-3 py-2 rounded text-white"
-//         />
-//         <button type="submit" className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white">
-//             Create Tournament
-//         </button>
-//         </form>
-
-//         {tournaments.length > 0 && (
-//         <div className="mt-8 grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-//             {tournaments.map(({ id, image, title, date, type, location, description }) => (
-//             <article key={id} className="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
-//                 {image && <img src={image} alt={title} className="w-full h-44 object-cover" />}
-//                 <div className="p-4 text-white">
-//                 <h3 className="text-xl font-semibold mb-1">{title}</h3>
-//                 <p className="text-sm text-gray-300 mb-1">
-//                     {date} &nbsp;|&nbsp; {type} &nbsp;|&nbsp; {location}
-//                 </p>
-//                 <p>{description}</p>
-//                 </div>
-//             </article>
-//             ))}
-//         </div>
-//         )}
-//     </section>
-//     </div>
-// );
+// function clsx(...parts) {
+//     return parts.filter(Boolean).join(" ");
 // }
 
-// // Score Management Popup component
-// function ScoreManagementPopup({
-// team,
-// onClose,
-// onScoreChange,
-// onLastOverChange,
-// onBattingChange,
-// onBowlingChange,
-// addBattingPlayer,
-// addBowlingPlayer,
-// }) {
-// if (!team) return null;
+// function Section({ title, children, right }) {
+//     return (
+//         <section className="bg-gray-900/40 rounded-2xl border border-gray-800 p-6 shadow-sm">
+//             <div className="flex items-center justify-between gap-4 mb-5">
+//                 <h2 className="text-2xl font-semibold">{title}</h2>
+//                 {right}
+//             </div>
+//             {children}
+//         </section>
+//     );
+// }
 
-// return (
-//     <div
-//     className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
-//     onClick={onClose}
-//     >
-//     <div
-//         className="bg-gray-800 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-//         onClick={(e) => e.stopPropagation()}
-//     >
-//         <h2 className="text-2xl font-bold mb-4">{team.name || "Unnamed Team"} - Score Management</h2>
+// function InlineSpinner({ label }) {
+//     return (
+//         <span className="inline-flex items-center gap-2 text-sm text-gray-300">
+//             <RefreshCw className="animate-spin" size={16} />
+//             {label || "Loading..."}
+//         </span>
+//     );
+// }
 
-//         {/* Team name and location editable */}
-//         <div className="grid grid-cols-2 gap-4 mb-6">
-//         <input
-//             type="text"
-//             placeholder="Team Name"
-//             value={team.name}
-//             onChange={(e) => onScoreChange(team.id, "name", e.target.value)}
-//             className="bg-gray-700 p-2 rounded text-white"
-//         />
-//         <input
-//             type="text"
-//             placeholder="Location"
-//             value={team.location}
-//             onChange={(e) => onScoreChange(team.id, "location", e.target.value)}
-//             className="bg-gray-700 p-2 rounded text-white"
-//         />
+// function Empty({ children }) {
+//     return <p className="text-gray-400 italic">{children}</p>;
+// }
+
+// function ErrorNote({ message }) {
+//     if (!message) return null;
+//     return (
+//         <div className="flex items-start gap-2 text-rose-300 bg-rose-900/20 border border-rose-800 rounded-lg p-3 mb-4">
+//             <AlertCircle size={18} className="mt-0.5" />
+//             <div className="text-sm leading-5">{message}</div>
 //         </div>
+//     );
+// }
 
-//         {/* Basic score fields */}
-//         <div className="grid grid-cols-3 gap-4 mb-6">
-//         <input
-//             type="text"
-//             placeholder="Score (Runs)"
-//             value={team.score}
-//             onChange={(e) => onScoreChange(team.id, "score", e.target.value)}
-//             className="bg-gray-700 p-2 rounded text-white"
-//         />
-//         <input
-//             type="text"
-//             placeholder="Wickets"
-//             value={team.wickets}
-//             onChange={(e) => onScoreChange(team.id, "wickets", e.target.value)}
-//             className="bg-gray-700 p-2 rounded text-white"
-//         />
-//         <input
-//             type="text"
-//             placeholder="Overs"
-//             value={team.overs}
-//             onChange={(e) => onScoreChange(team.id, "overs", e.target.value)}
-//             className="bg-gray-700 p-2 rounded text-white"
-//         />
+// // -------------------------------------------------------------
+// // Score Management Modal (Improved for match-based management)
+// // -------------------------------------------------------------
+// function ScoreManagementPopup({ team, players, entries, onAddEntry, onUpdateEntry, onDeleteEntry, onClose }) {
+//     const [localEntries, setLocalEntries] = useState(entries || []);
+//     const [savingId, setSavingId] = useState(null);
+
+//     useEffect(() => setLocalEntries(entries || []), [entries]);
+
+//     const addNewForPlayer = async (playerId) => {
+//         try {
+//             await onAddEntry(playerId);
+//         } catch (e) {
+//             console.error(e);
+//         }
+//     };
+
+//     const updateField = (id, field, value) => {
+//         setLocalEntries((prev) => prev.map((e) => (e.id === id ? { ...e, [field]: value } : e)));
+//     };
+
+//     const saveRow = async (entry) => {
+//         setSavingId(entry.id);
+//         try {
+//             await onUpdateEntry(entry.id, {
+//                 runs: Number(entry.runs) || 0,
+//                 wickets: Number(entry.wickets) || 0,
+//                 catches: Number(entry.catches) || 0,
+//                 playerId: entry.playerId,
+//                 teamId: team.id,
+//                 roundId: entry.roundId ?? null,
+//             });
+//         } finally {
+//             setSavingId(null);
+//         }
+//     };
+
+//     const usedPlayerIds = new Set(localEntries.map((e) => Number(e.playerId)));
+//     const availablePlayers = players.filter((p) => !usedPlayerIds.has(Number(p.id)));
+
+//     const playerName = (playerId) => {
+//         const p = players.find((pp) => Number(pp.id) === Number(playerId));
+//         return p ? p.nickname || p.name || `#${p.jerseyNumber}` : "Unknown";
+//     };
+
+//     const totals = {
+//         runs: localEntries.reduce((a, e) => a + (Number(e.runs) || 0), 0),
+//         wickets: localEntries.reduce((a, e) => a + (Number(e.wickets) || 0), 0),
+//         catches: localEntries.reduce((a, e) => a + (Number(e.catches) || 0), 0),
+//     };
+
+//     return (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+//             <div
+//                 className="bg-gray-900 border border-gray-800 rounded-2xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto"
+//                 onClick={(e) => e.stopPropagation()}
+//             >
+//                 <div className="flex items-center justify-between mb-4">
+//                     <h3 className="text-xl font-bold">Manage Scores — {team?.teamOneName} vs {team?.teamTwoName}</h3>
+//                     <button onClick={onClose} className="p-2 rounded hover:bg-gray-800">
+//                         <X size={18} />
+//                     </button>
+//                 </div>
+
+//                 {/* Totals */}
+//                 <div className="grid grid-cols-3 gap-3 mb-6 text-center">
+//                     <div className="bg-gray-800 rounded p-3">
+//                         <div className="text-xs text-gray-300">Team Runs</div>
+//                         <div className="text-xl font-semibold">{totals.runs}</div>
+//                     </div>
+//                     <div className="bg-gray-800 rounded p-3">
+//                         <div className="text-xs text-gray-300">Team Wickets</div>
+//                         <div className="text-xl font-semibold">{totals.wickets}</div>
+//                     </div>
+//                     <div className="bg-gray-800 rounded p-3">
+//                         <div className="text-xs text-gray-300">Team Catches</div>
+//                         <div className="text-xl font-semibold">{totals.catches}</div>
+//                     </div>
+//                 </div>
+
+//                 {/* Add Player */}
+//                 <div className="mb-6 flex gap-3 items-center">
+//                     <select
+//                         id="add-player-select"
+//                         className="bg-gray-700 p-2 rounded text-white flex-1"
+//                         defaultValue=""
+//                         onChange={(e) => {
+//                             const val = e.target.value;
+//                             if (!val) return;
+//                             addNewForPlayer(Number(val));
+//                             e.target.value = "";
+//                         }}
+//                     >
+//                         <option value="">Select player to add...</option>
+//                         {availablePlayers.map((p) => (
+//                             <option key={p.id} value={p.id}>
+//                                 #{p.jerseyNumber} — {p.nickname || p.name}
+//                             </option>
+//                         ))}
+//                     </select>
+//                     <button
+//                         onClick={() => {
+//                             const sel = document.getElementById("add-player-select");
+//                             if (sel && sel.value) {
+//                                 addNewForPlayer(Number(sel.value));
+//                                 sel.value = "";
+//                             }
+//                         }}
+//                         className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
+//                     >
+//                         <Plus size={16} /> Add
+//                     </button>
+//                 </div>
+
+//                 {availablePlayers.length === 0 && (
+//                     <p className="mb-4 text-xs text-gray-400">All team players are added to this scorecard.</p>
+//                 )}
+
+//                 {/* Score table */}
+//                 <table className="w-full text-sm text-white table-auto mb-3 border-collapse border border-gray-700">
+//                     <thead>
+//                         <tr>
+//                             <th className="border border-gray-700 px-2 py-1 text-left">Player</th>
+//                             <th className="border border-gray-700 px-2 py-1 text-center">Runs</th>
+//                             <th className="border border-gray-700 px-2 py-1 text-center">Wickets</th>
+//                             <th className="border border-gray-700 px-2 py-1 text-center">Catches</th>
+//                             <th className="border border-gray-700 px-2 py-1 text-center">Delete</th>
+//                         </tr>
+//                     </thead>
+//                     <tbody>
+//                         {localEntries.length === 0 ? (
+//                             <tr>
+//                                 <td colSpan={5} className="border border-gray-700 px-2 py-2 text-gray-500 text-center">
+//                                     No player entries yet.
+//                                 </td>
+//                             </tr>
+//                         ) : (
+//                             localEntries.map((e) => (
+//                                 <tr key={e.id}>
+//                                     <td className="border border-gray-700 px-2 py-1">{playerName(e.playerId)}</td>
+//                                     <td className="border border-gray-700 px-2 py-1 text-center">
+//                                         <input
+//                                             type="number"
+//                                             value={e.runs ?? 0}
+//                                             onChange={(ev) => updateField(e.id, "runs", ev.target.value)}
+//                                             onBlur={() => saveRow(e)}
+//                                             className="bg-gray-700 w-20 p-1 rounded text-white text-center"
+//                                         />
+//                                     </td>
+//                                     <td className="border border-gray-700 px-2 py-1 text-center">
+//                                         <input
+//                                             type="number"
+//                                             value={e.wickets ?? 0}
+//                                             onChange={(ev) => updateField(e.id, "wickets", ev.target.value)}
+//                                             onBlur={() => saveRow(e)}
+//                                             className="bg-gray-700 w-20 p-1 rounded text-white text-center"
+//                                         />
+//                                     </td>
+//                                     <td className="border border-gray-700 px-2 py-1 text-center">
+//                                         <input
+//                                             type="number"
+//                                             value={e.catches ?? 0}
+//                                             onChange={(ev) => updateField(e.id, "catches", ev.target.value)}
+//                                             onBlur={() => saveRow(e)}
+//                                             className="bg-gray-700 w-20 p-1 rounded text-white text-center"
+//                                         />
+//                                     </td>
+//                                     <td className="border border-gray-700 px-2 py-1 text-center">
+//                                         <button
+//                                             className="text-red-500 hover:text-red-600"
+//                                             title="Delete Player Entry"
+//                                             onClick={() => onDeleteEntry(e.id)}
+//                                         >
+//                                             <Trash2 size={18} />
+//                                         </button>
+//                                     </td>
+//                                 </tr>
+//                             ))
+//                         )}
+//                     </tbody>
+//                 </table>
+
+//                 <div className="flex justify-end mt-6">
+//                     <button
+//                         onClick={onClose}
+//                         className="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-4 py-2"
+//                     >
+//                         Close
+//                     </button>
+//                 </div>
+//             </div>
 //         </div>
+//     );
+// }
 
-//         {/* Last over balls input */}
-//         <div className="flex gap-2 mb-6">
-//         {team.lastOverBalls.map((b, i) => (
-//             <input
-//             key={i}
-//             type="text"
-//             maxLength={1}
-//             value={b}
-//             onChange={(e) => onLastOverChange(team.id, i, e.target.value)}
-//             className="w-10 text-center bg-gray-700 p-2 rounded text-white"
-//             />
-//         ))}
-//         </div>
+// // -------------------------------------------------------------
+// // Main AdminPanel
+// // -------------------------------------------------------------
+// export default function AdminPanel() {
+//     const [error, setError] = useState("");
 
-//         {/* Batting Section */}
-//         <div className="mb-6">
-//         <h3 className="text-lg font-semibold mb-2 text-white">Batting</h3>
-//         <table className="w-full text-sm text-white table-auto mb-3 border-collapse border border-gray-600">
-//             <thead>
-//             <tr>
-//                 <th className="border border-gray-600 px-2 py-1 text-left">Player</th>
-//                 <th className="border border-gray-600 px-2 py-1 text-center">Runs</th>
-//                 <th className="border border-gray-600 px-2 py-1 text-center">Balls</th>
-//                 <th className="border border-gray-600 px-2 py-1 text-center">4s</th>
-//                 <th className="border border-gray-600 px-2 py-1 text-center">6s</th>
-//                 <th className="border border-gray-600 px-2 py-1 text-center">SR</th>
-//             </tr>
-//             </thead>
-//             <tbody>
-//             {(team.batting.length > 0 ? team.batting : [{ name: "", runs: "", balls: "", fours: "", sixes: "", sr: "" }]).map(
-//                 (bat, idx) => (
-//                 <tr key={idx}>
-//                     <td className="border border-gray-600 px-2 py-1">
+//     const [tournaments, setTournaments] = useState([]);
+//     const [selectedTournament, setSelectedTournament] = useState(null);
+//     const [loadingTournaments, setLoadingTournaments] = useState(false);
+
+//     const [teams, setTeams] = useState([]);
+//     const [loadingTeams, setLoadingTeams] = useState(false);
+//     const [selectedTeam, setSelectedTeam] = useState(null);
+
+//     const [allPlayers, setAllPlayers] = useState([]);
+//     const [loadingPlayers, setLoadingPlayers] = useState(false);
+
+//     const [scorecards, setScorecards] = useState([]);
+//     const [loadingScorecards, setLoadingScorecards] = useState(false);
+
+//     const [selectedMatch, setSelectedMatch] = useState(null);
+
+//     const [newsletterList, setNewsletterList] = useState([]);
+//     const [loadingNews, setLoadingNews] = useState(false);
+//     const [newsletterForm, setNewsletterForm] = useState({
+//         subject: "",
+//         summary: "",
+//         imageLink: "",
+//         tournamentId: "",
+//         teamId: "",
+//         content: "",
+//     });
+
+//     const [tournamentForm, setTournamentForm] = useState({
+//         tournamentName: "",
+//         startDate: "",
+//         matchType: "",
+//         location: "",
+//         description: "",
+//         image: "",
+//     });
+
+//     const [fixtureRounds, setFixtureRounds] = useState([]);
+//     const [loadingRounds, setLoadingRounds] = useState(false);
+//     const [generating, setGenerating] = useState(false);
+
+//     const getPlayersOfTeam = (teamId) => allPlayers.filter((p) => Number(p.teamId) === Number(teamId));
+
+//     const getPlayersByTeamName = (teamName) => {
+//         const team = teams.find((t) => t.name === teamName);
+//         if (!team) return [];
+//         return getPlayersOfTeam(team.id);
+//     };
+
+//     const matchPlayers = useMemo(() => {
+//         if (!selectedMatch) return [];
+//         return [...getPlayersByTeamName(selectedMatch.teamOneName), ...getPlayersByTeamName(selectedMatch.teamTwoName)];
+//     }, [selectedMatch, teams, allPlayers]);
+
+//     const matchScorecards = useMemo(() => {
+//         if (!selectedMatch) return [];
+//         return scorecards.filter((s) => s.roundId === selectedMatch.id);
+//     }, [selectedMatch, scorecards]);
+
+//     useEffect(() => {
+//         const loadTournaments = async () => {
+//             setLoadingTournaments(true);
+//             setError("");
+//             try {
+//                 const res = await fetch(`${API_BASE}/api/tournaments/get`);
+//                 const data = await res.json();
+//                 setTournaments(Array.isArray(data) ? data : []);
+//             } catch {
+//                 setError("Failed to load tournaments.");
+//                 setTournaments([]);
+//             } finally {
+//                 setLoadingTournaments(false);
+//             }
+//         };
+//         loadTournaments();
+//     }, []);
+
+//     useEffect(() => {
+//         const loadTeams = async () => {
+//             if (!selectedTournament) {
+//                 setTeams([]);
+//                 return;
+//             }
+//             setLoadingTeams(true);
+//             setError("");
+//             try {
+//                 const res = await fetch(`${API_BASE}/api/tournaments/${selectedTournament.id}/teams`);
+//                 const data = await res.json();
+//                 setTeams(Array.isArray(data) ? data : []);
+//             } catch {
+//                 setError("Failed to load teams.");
+//                 setTeams([]);
+//             } finally {
+//                 setLoadingTeams(false);
+//             }
+//         };
+//         loadTeams();
+//     }, [selectedTournament]);
+
+//     useEffect(() => {
+//         const loadPlayers = async () => {
+//             setLoadingPlayers(true);
+//             setError("");
+//             try {
+//                 const res = await fetch(`${API_BASE}/api/player/all`);
+//                 const data = await res.json();
+//                 setAllPlayers(Array.isArray(data) ? data : []);
+//             } catch {
+//                 setError("Failed to load players.");
+//                 setAllPlayers([]);
+//             } finally {
+//                 setLoadingPlayers(false);
+//             }
+//         };
+//         loadPlayers();
+//     }, [teams]);
+
+//     const refreshScorecards = async () => {
+//         setLoadingScorecards(true);
+//         setError("");
+//         try {
+//             const res = await fetch(`${API_BASE}/api/scorecard/all`);
+//             const data = await res.json();
+//             setScorecards(Array.isArray(data) ? data : []);
+//         } catch {
+//             setError("Failed to load scorecards.");
+//             setScorecards([]);
+//         } finally {
+//             setLoadingScorecards(false);
+//         }
+//     };
+//     useEffect(() => {
+//         refreshScorecards();
+//     }, []);
+
+//     useEffect(() => {
+//         const loadRounds = async () => {
+//             if (!selectedTournament) {
+//                 setFixtureRounds([]);
+//                 return;
+//             }
+//             setLoadingRounds(true);
+//             setError("");
+//             try {
+//                 const res = await axios.get(`${API_BASE}/api/round/tournament/${selectedTournament.id}`);
+//                 const data = Array.isArray(res.data) ? res.data : [];
+//                 data.sort((a, b) => (a.roundNumber - b.roundNumber) || (a.id - b.id));
+//                 setFixtureRounds(data);
+//             } catch {
+//                 setError("Failed to load rounds for this tournament.");
+//                 setFixtureRounds([]);
+//             } finally {
+//                 setLoadingRounds(false);
+//             }
+//         };
+//         loadRounds();
+//     }, [selectedTournament]);
+
+//     const handleTournamentField = (field, val) => setTournamentForm((p) => ({ ...p, [field]: val }));
+
+//     const addTournament = async (e) => {
+//         e.preventDefault();
+//         setError("");
+//         try {
+//             const res = await fetch(`${API_BASE}/api/tournaments/create`, {
+//                 method: "POST",
+//                 headers: { "Content-Type": "application/json" },
+//                 body: JSON.stringify(tournamentForm),
+//             });
+//             if (!res.ok) throw new Error("Create failed");
+//             const listRes = await fetch(`${API_BASE}/api/tournaments/get`);
+//             const data = await listRes.json();
+//             setTournaments(Array.isArray(data) ? data : []);
+//             setTournamentForm({ tournamentName: "", startDate: "", matchType: "", location: "", description: "", image: "" });
+//         } catch {
+//             setError("Failed to create tournament.");
+//         }
+//     };
+
+//     const handleNewsletterField = (field, val) => setNewsletterForm((p) => ({ ...p, [field]: val }));
+
+//     const refreshNewsletters = async () => {
+//         setLoadingNews(true);
+//         setError("");
+//         try {
+//             const res = await fetch(`${API_BASE}/api/newsletter/all`);
+//             const data = await res.json();
+//             setNewsletterList(Array.isArray(data) ? data : []);
+//         } catch {
+//             setError("Failed to load newsletters.");
+//             setNewsletterList([]);
+//         } finally {
+//             setLoadingNews(false);
+//         }
+//     };
+
+//     useEffect(() => {
+//         refreshNewsletters();
+//     }, []);
+
+//     const addNewsletter = async (e) => {
+//         e.preventDefault();
+//         setError("");
+//         try {
+//             let teamName = "";
+//             if (newsletterForm.teamId) {
+//                 const team = teams.find((t) => Number(t.id) === Number(newsletterForm.teamId));
+//                 teamName = team ? team.name : "";
+//             }
+//             const payload = { ...newsletterForm, teamName };
+//             delete payload.teamId;
+//             const res = await fetch(`${API_BASE}/api/newsletter/create`, {
+//                 method: "POST",
+//                 headers: { "Content-Type": "application/json" },
+//                 body: JSON.stringify(payload),
+//             });
+//             if (!res.ok) throw new Error("Create failed");
+//             setNewsletterForm({ subject: "", summary: "", imageLink: "", tournamentId: "", teamId: "", content: "" });
+//             refreshNewsletters();
+//         } catch {
+//             setError("Failed to create newsletter.");
+//         }
+//     };
+
+//     const deleteNewsletter = async (id) => {
+//         setError("");
+//         try {
+//             const res = await fetch(`${API_BASE}/api/newsletter/${id}`, { method: "DELETE" });
+//             if (!res.ok) throw new Error("Delete failed");
+//             refreshNewsletters();
+//         } catch {
+//             setError("Failed to delete newsletter.");
+//         }
+//     };
+
+//     const deleteTeam = async (teamId) => {
+//         if (!selectedTournament?.id) return;
+//         setError("");
+//         try {
+//             const res = await fetch(`${API_BASE}/api/tournaments/${selectedTournament.id}/remove-team/${teamId}`, { method: "DELETE" });
+//             if (!res.ok) throw new Error("Remove failed");
+//             setTeams((prev) => prev.filter((t) => t.id !== teamId));
+//             if (selectedTeam?.id === teamId) setSelectedTeam(null);
+//             const pl = await fetch(`${API_BASE}/api/player/all`);
+//             const pData = await pl.json();
+//             setAllPlayers(Array.isArray(pData) ? pData : []);
+//             await refreshScorecards();
+//         } catch {
+//             setError("Failed to delete team.");
+//         }
+//     };
+
+//     const addPlayerScoreEntry = async (playerId) => {
+//         if (!selectedMatch) return;
+//         const player = matchPlayers.find((p) => p.id === playerId);
+//         if (!player) return;
+//         const payload = {
+//             runs: 0,
+//             wickets: 0,
+//             catches: 0,
+//             playerId,
+//             teamId: player.teamId,
+//             roundId: selectedMatch.id,
+//         };
+//         await fetch(`${API_BASE}/api/scorecard/create`, {
+//             method: "POST",
+//             headers: { "Content-Type": "application/json" },
+//             body: JSON.stringify(payload),
+//         });
+//         refreshScorecards();
+//     };
+
+//     const updateScoreEntry = async (id, patch) => {
+//         const current = scorecards.find((s) => s.id === id);
+//         if (!current) return;
+//         const dto = {
+//             id,
+//             runs: patch.runs ?? current.runs,
+//             wickets: patch.wickets ?? current.wickets,
+//             catches: patch.catches ?? current.catches,
+//             playerId: patch.playerId ?? current.playerId,
+//             teamId: patch.teamId ?? current.teamId,
+//             roundId: patch.roundId ?? current.roundId,
+//         };
+//         await fetch(`${API_BASE}/api/scorecard/${id}`, {
+//             method: "PUT",
+//             headers: { "Content-Type": "application/json" },
+//             body: JSON.stringify(dto),
+//         });
+//         refreshScorecards();
+//     };
+
+//     const deleteScoreEntry = async (id) => {
+//         await fetch(`${API_BASE}/api/scorecard/${id}`, { method: "DELETE" });
+//         refreshScorecards();
+//     };
+
+//     const generateFixture = async () => {
+//         if (!selectedTournament?.id) {
+//             alert("Please select a tournament first.");
+//             return;
+//         }
+//         setGenerating(true);
+//         setError("");
+//         try {
+//             await axios.post(`${API_BASE}/api/round/generate`, null, { params: { tournamentId: selectedTournament.id } });
+//             const res = await axios.get(`${API_BASE}/api/round/tournament/${selectedTournament.id}`);
+//             const data = Array.isArray(res.data) ? res.data : [];
+//             data.sort((a, b) => (a.roundNumber - b.roundNumber) || (a.id - b.id));
+//             setFixtureRounds(data);
+//             alert("Fixture generated successfully!");
+//         } catch (e) {
+//             console.error(e);
+//             setError(e?.response?.data?.message || e.message || "Failed to generate fixtures.");
+//         } finally {
+//             setGenerating(false);
+//         }
+//     };
+
+//     const groupedRounds = useMemo(() => {
+//         const map = new Map();
+//         fixtureRounds.forEach((r) => {
+//             const k = r.roundNumber;
+//             if (!map.has(k)) map.set(k, []);
+//             map.get(k).push(r);
+//         });
+//         for (const [k, arr] of map.entries()) {
+//             arr.sort((a, b) => a.id - b.id);
+//         }
+//         return [...map.entries()].sort((a, b) => a[0] - b[0]);
+//     }, [fixtureRounds]);
+
+//     return (
+//         <div className="p-6 max-w-7xl mx-auto bg-black min-h-screen text-white space-y-10">
+//             <header className="flex items-center justify-between">
+//                 <h1 className="text-3xl font-bold">Admin Control Panel</h1>
+//             </header>
+
+//             <ErrorNote message={error} />
+
+//             {/* Tournaments */}
+//             <Section title="Tournaments" right={loadingTournaments ? <InlineSpinner /> : null}>
+//                 {loadingTournaments ? (
+//                     <Empty>Loading tournaments…</Empty>
+//                 ) : (
+//                     <>
+//                         <div className="flex flex-wrap gap-2 mb-6">
+//                             {tournaments.length === 0 ? (
+//                                 <Empty>No tournaments found.</Empty>
+//                             ) : (
+//                                 tournaments.map((t) => (
+//                                     <button
+//                                         key={t.id}
+//                                         className={clsx(
+//                                             "px-4 py-2 rounded border",
+//                                             selectedTournament?.id === t.id
+//                                                 ? "bg-yellow-500 text-black border-yellow-500"
+//                                                 : "bg-gray-800 border-gray-700"
+//                                         )}
+//                                         onClick={() => setSelectedTournament(t)}
+//                                     >
+//                                         {t.tournamentName || t.title || t.name}
+//                                     </button>
+//                                 ))
+//                             )}
+//                         </div>
+//                         <form onSubmit={addTournament} className="bg-gray-900/60 p-5 rounded-xl border border-gray-800 max-w-xl space-y-4">
+//                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                                 <input
+//                                     type="text"
+//                                     placeholder="Title *"
+//                                     value={tournamentForm.tournamentName}
+//                                     onChange={(e) => handleTournamentField("tournamentName", e.target.value)}
+//                                     className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
+//                                     required
+//                                 />
+//                                 <input
+//                                     type="date"
+//                                     placeholder="Date *"
+//                                     value={tournamentForm.startDate}
+//                                     onChange={(e) => handleTournamentField("startDate", e.target.value)}
+//                                     className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
+//                                     required
+//                                 />
+//                                 <input
+//                                     type="text"
+//                                     placeholder="Type (e.g. Adult, Under19) *"
+//                                     value={tournamentForm.matchType}
+//                                     onChange={(e) => handleTournamentField("matchType", e.target.value)}
+//                                     className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
+//                                     required
+//                                 />
+//                                 <input
+//                                     type="text"
+//                                     placeholder="Location *"
+//                                     value={tournamentForm.location}
+//                                     onChange={(e) => handleTournamentField("location", e.target.value)}
+//                                     className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
+//                                     required
+//                                 />
+//                             </div>
+//                             <textarea
+//                                 placeholder="Description (optional)"
+//                                 value={tournamentForm.description}
+//                                 onChange={(e) => handleTournamentField("description", e.target.value)}
+//                                 rows={3}
+//                                 className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
+//                             />
+//                             <input
+//                                 type="text"
+//                                 placeholder="Image Link"
+//                                 value={tournamentForm.image}
+//                                 onChange={(e) => handleTournamentField("image", e.target.value)}
+//                                 className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
+//                             />
+//                             <button type="submit" className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white">
+//                                 Create Tournament
+//                             </button>
+//                         </form>
+//                     </>
+//                 )}
+//             </Section>
+
+//             {/* Registered Teams */}
+//             <Section title={`Registered Teams${selectedTournament ? ` for "${selectedTournament.tournamentName || selectedTournament.title || selectedTournament.name}"` : ""}`} right={loadingTeams ? <InlineSpinner /> : null}>
+//                 {!selectedTournament ? (
+//                     <Empty>Select a tournament to view teams.</Empty>
+//                 ) : loadingTeams ? (
+//                     <Empty>Loading teams…</Empty>
+//                 ) : teams.length === 0 ? (
+//                     <Empty>No teams found.</Empty>
+//                 ) : (
+//                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+//                         {teams.map((team) => (
+//                             <div key={team.id} className="bg-gray-900 rounded-xl border border-gray-800 p-4 relative">
+//                                 <button title="Delete Team" className="absolute top-2 right-2 text-gray-400 hover:text-red-600" onClick={() => deleteTeam(team.id)}>
+//                                     <Trash2 size={18} />
+//                                 </button>
+//                                 <h3 className="text-lg font-semibold mb-1">{team.name}</h3>
+//                                 <p className="text-sm text-gray-400">Location: {team.location || "N/A"}</p>
+//                                 <p className="text-sm text-gray-400">Phone: {team.phone || "N/A"}</p>
+//                                 <p className="text-sm text-gray-400 mb-3">Players: {getPlayersOfTeam(team.id).length}</p>
+//                                 <div className="flex items-center gap-2">
+//                                     <button onClick={() => setSelectedTeam(team)} className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm">
+//                                         View Players
+//                                     </button>
+//                                 </div>
+//                             </div>
+//                         ))}
+//                     </div>
+//                 )}
+
+//                 {selectedTeam && (
+//                     <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-50" onClick={() => setSelectedTeam(null)}>
+//                         <div className="bg-gray-900 p-6 rounded-2xl max-w-md w-full border border-gray-800" onClick={(e) => e.stopPropagation()}>
+//                             <div className="flex items-center justify-between mb-4">
+//                                 <h3 className="text-2xl font-semibold">{selectedTeam.name} — Players</h3>
+//                                 <button onClick={() => setSelectedTeam(null)} className="p-2 rounded hover:bg-gray-800">
+//                                     <X size={18} />
+//                                 </button>
+//                             </div>
+//                             {loadingPlayers ? (
+//                                 <Empty>Loading players…</Empty>
+//                             ) : getPlayersOfTeam(selectedTeam.id).length === 0 ? (
+//                                 <Empty>No players in this team.</Empty>
+//                             ) : (
+//                                 <ul className="space-y-2 max-h-72 overflow-y-auto pr-1">
+//                                     {getPlayersOfTeam(selectedTeam.id).map((player) => (
+//                                         <li key={player.id} className="flex justify-between items-center border-b border-gray-800 pb-2">
+//                                             <span>
+//                                                 #{player.jerseyNumber} — {player.nickname || player.name}
+//                                             </span>
+//                                         </li>
+//                                     ))}
+//                                 </ul>
+//                             )}
+//                             <div className="flex justify-end mt-4">
+//                                 <button onClick={() => setSelectedTeam(null)} className="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-4 py-2">
+//                                     Close
+//                                 </button>
+//                             </div>
+//                         </div>
+//                     </div>
+//                 )}
+//             </Section>
+
+//             {/* Score Management - match based */}
+//             <Section title="Score Management">
+//                 <label className="block mb-2 font-semibold text-lg">Select Match to Manage Scores:</label>
+//                 <select
+//                     className="mb-4 p-2 rounded w-full max-w-md bg-gray-800 text-white border border-gray-700"
+//                     value={selectedMatch ? selectedMatch.id : ""}
+//                     onChange={(e) => {
+//                         const val = e.target.value;
+//                         if (!val) {
+//                             setSelectedMatch(null);
+//                             return;
+//                         }
+//                         const match = fixtureRounds.find((m) => m.id.toString() === val);
+//                         setSelectedMatch(match || null);
+//                     }}
+//                 >
+//                     <option value="">-- Select Match --</option>
+//                     {fixtureRounds.map((m) => (
+//                         <option key={m.id} value={m.id}>
+//                             {m.teamOneName || "TBD"} vs {m.teamTwoName || "TBD"}
+//                         </option>
+//                     ))}
+//                 </select>
+
+//                 {!selectedMatch ? (
+//                     <p className="text-gray-400 italic">Please select a match above to manage scores.</p>
+//                 ) : (
+//                     <ScoreManagementPopup
+//                         team={selectedMatch}
+//                         players={matchPlayers}
+//                         entries={matchScorecards}
+//                         onAddEntry={addPlayerScoreEntry}
+//                         onUpdateEntry={updateScoreEntry}
+//                         onDeleteEntry={deleteScoreEntry}
+//                         onClose={() => setSelectedMatch(null)}
+//                     />
+//                 )}
+//             </Section>
+
+//             {/* Newsletter Management */}
+//             <Section title="Newsletter Management" right={loadingNews ? <InlineSpinner /> : null}>
+//                 <form onSubmit={addNewsletter} className="bg-gray-900/60 p-5 rounded-xl border border-gray-800 max-w-xl space-y-4">
 //                     <input
 //                         type="text"
-//                         value={bat.name}
-//                         onChange={(e) => onBattingChange(team.id, idx, "name", e.target.value)}
-//                         className="bg-gray-700 w-full p-1 rounded text-white"
+//                         placeholder="Subject *"
+//                         value={newsletterForm.subject}
+//                         onChange={(e) => handleNewsletterField("subject", e.target.value)}
+//                         className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
+//                         required
 //                     />
-//                     </td>
-//                     <td className="border border-gray-600 px-2 py-1 text-center">
-//                     <input
-//                         type="number"
-//                         value={bat.runs}
-//                         onChange={(e) => onBattingChange(team.id, idx, "runs", e.target.value)}
-//                         className="bg-gray-700 w-full p-1 rounded text-white text-center"
-//                     />
-//                     </td>
-//                     <td className="border border-gray-600 px-2 py-1 text-center">
-//                     <input
-//                         type="number"
-//                         value={bat.balls}
-//                         onChange={(e) => onBattingChange(team.id, idx, "balls", e.target.value)}
-//                         className="bg-gray-700 w-full p-1 rounded text-white text-center"
-//                     />
-//                     </td>
-//                     <td className="border border-gray-600 px-2 py-1 text-center">
-//                     <input
-//                         type="number"
-//                         value={bat.fours}
-//                         onChange={(e) => onBattingChange(team.id, idx, "fours", e.target.value)}
-//                         className="bg-gray-700 w-full p-1 rounded text-white text-center"
-//                     />
-//                     </td>
-//                     <td className="border border-gray-600 px-2 py-1 text-center">
-//                     <input
-//                         type="number"
-//                         value={bat.sixes}
-//                         onChange={(e) => onBattingChange(team.id, idx, "sixes", e.target.value)}
-//                         className="bg-gray-700 w-full p-1 rounded text-white text-center"
-//                     />
-//                     </td>
-//                     <td className="border border-gray-600 px-2 py-1 text-center">
-//                     <input
-//                         type="number"
-//                         value={bat.sr}
-//                         onChange={(e) => onBattingChange(team.id, idx, "sr", e.target.value)}
-//                         className="bg-gray-700 w-full p-1 rounded text-white text-center"
-//                     />
-//                     </td>
-//                 </tr>
-//                 )
-//             )}
-//             </tbody>
-//         </table>
-//         <button
-//             onClick={() => addBattingPlayer(team.id)}
-//             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1 rounded"
-//         >
-//             Add Batsman
-//         </button>
-//         </div>
-
-//         {/* Bowling Section */}
-//         <div className="mb-6">
-//         <h3 className="text-lg font-semibold mb-2 text-white">Bowling</h3>
-//         <table className="w-full text-sm text-white table-auto mb-3 border-collapse border border-gray-600">
-//             <thead>
-//             <tr>
-//                 <th className="border border-gray-600 px-2 py-1 text-left">Bowler</th>
-//                 <th className="border border-gray-600 px-2 py-1 text-center">Overs</th>
-//                 <th className="border border-gray-600 px-2 py-1 text-center">Runs</th>
-//                 <th className="border border-gray-600 px-2 py-1 text-center">Wickets</th>
-//                 <th className="border border-gray-600 px-2 py-1 text-center">Econ</th>
-//             </tr>
-//             </thead>
-//             <tbody>
-//             {(team.bowling.length > 0 ? team.bowling : [{ name: "", overs: "", runs: "", wickets: "", econ: "" }]).map(
-//                 (bowl, idx) => (
-//                 <tr key={idx}>
-//                     <td className="border border-gray-600 px-2 py-1">
 //                     <input
 //                         type="text"
-//                         value={bowl.name}
-//                         onChange={(e) => onBowlingChange(team.id, idx, "name", e.target.value)}
-//                         className="bg-gray-700 w-full p-1 rounded text-white"
+//                         placeholder="Summary *"
+//                         value={newsletterForm.summary}
+//                         onChange={(e) => handleNewsletterField("summary", e.target.value)}
+//                         className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
+//                         required
 //                     />
-//                     </td>
-//                     <td className="border border-gray-600 px-2 py-1 text-center">
 //                     <input
-//                         type="number"
-//                         value={bowl.overs}
-//                         onChange={(e) => onBowlingChange(team.id, idx, "overs", e.target.value)}
-//                         className="bg-gray-700 w-full p-1 rounded text-white text-center"
+//                         type="text"
+//                         placeholder="Image Link"
+//                         value={newsletterForm.imageLink}
+//                         onChange={(e) => handleNewsletterField("imageLink", e.target.value)}
+//                         className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
 //                     />
-//                     </td>
-//                     <td className="border border-gray-600 px-2 py-1 text-center">
-//                     <input
-//                         type="number"
-//                         value={bowl.runs}
-//                         onChange={(e) => onBowlingChange(team.id, idx, "runs", e.target.value)}
-//                         className="bg-gray-700 w-full p-1 rounded text-white text-center"
-//                     />
-//                     </td>
-//                     <td className="border border-gray-600 px-2 py-1 text-center">
-//                     <input
-//                         type="number"
-//                         value={bowl.wickets}
-//                         onChange={(e) => onBowlingChange(team.id, idx, "wickets", e.target.value)}
-//                         className="bg-gray-700 w-full p-1 rounded text-white text-center"
-//                     />
-//                     </td>
-//                     <td className="border border-gray-600 px-2 py-1 text-center">
-//                     <input
-//                         type="number"
-//                         step="0.1"
-//                         value={bowl.econ}
-//                         onChange={(e) => onBowlingChange(team.id, idx, "econ", e.target.value)}
-//                         className="bg-gray-700 w-full p-1 rounded text-white text-center"
-//                     />
-//                     </td>
-//                 </tr>
-//                 )
-//             )}
-//             </tbody>
-//         </table>
-//         <button
-//             onClick={() => addBowlingPlayer(team.id)}
-//             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1 rounded"
-//         >
-//             Add Bowler
-//         </button>
-//         </div>
 
-//         <div className="flex justify-end">
-//         <button
-//             onClick={onClose}
-//             className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
-//         >
-//             Save & Close
-//         </button>
+//                     <select
+//                         value={newsletterForm.tournamentId}
+//                         onChange={(e) => {
+//                             const val = e.target.value;
+//                             handleNewsletterField("tournamentId", val === "" ? "" : Number(val));
+//                             const selTournament = tournaments.find((t) => t.id === Number(val));
+//                             setSelectedTournament(selTournament || null);
+//                         }}
+//                         className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
+//                     >
+//                         <option value="">Select Tournament (optional)</option>
+//                         {tournaments.map((t) => (
+//                             <option key={t.id} value={t.id}>
+//                                 {t.tournamentName || t.title || t.name}
+//                             </option>
+//                         ))}
+//                     </select>
+
+//                     <select
+//                         value={newsletterForm.teamId}
+//                         onChange={(e) => handleNewsletterField("teamId", e.target.value === "" ? "" : Number(e.target.value))}
+//                         className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
+//                         disabled={!selectedTournament || teams.length === 0}
+//                     >
+//                         <option value="">Select Team (optional)</option>
+//                         {teams.map((team) => (
+//                             <option key={team.id} value={team.id}>
+//                                 {team.name}
+//                             </option>
+//                         ))}
+//                     </select>
+
+//                     <textarea
+//                         placeholder="Content *"
+//                         value={newsletterForm.content}
+//                         onChange={(e) => handleNewsletterField("content", e.target.value)}
+//                         required
+//                         rows={4}
+//                         className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
+//                     />
+//                     <button type="submit" className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white">
+//                         Publish News
+//                     </button>
+//                 </form>
+
+//                 <div className="mt-6 grid sm:grid-cols-2 md:grid-cols-3 gap-6">
+//                     {loadingNews ? (
+//                         <Empty>Loading newsletters…</Empty>
+//                     ) : newsletterList.length === 0 ? (
+//                         <Empty>No newsletters found.</Empty>
+//                     ) : (
+//                         newsletterList.map((nw) => (
+//                             <article key={nw.id} className="bg-white rounded-xl shadow p-5 text-gray-900 relative">
+//                                 <button className="absolute top-2 right-2 text-red-600" onClick={() => deleteNewsletter(nw.id)} title="Delete Newsletter">
+//                                     <Trash2 size={18} />
+//                                 </button>
+//                                 {nw.imageLink && <img src={nw.imageLink} alt={nw.subject} className="w-full h-40 object-cover rounded mb-4" />}
+//                                 <h3 className="text-xl font-semibold">{nw.subject}</h3>
+//                                 <p className="text-sm font-medium text-gray-600 mb-1">
+//                                     Tournament ID: {nw.tournamentId || "N/A"} | Team: {nw.teamName || "N/A"}
+//                                 </p>
+//                                 <p className="mb-2">{nw.summary}</p>
+//                                 <p className="mb-2">{nw.content}</p>
+//                             </article>
+//                         ))
+//                     )}
+//                 </div>
+//             </Section>
+
+//             {/* Fixture Rounds */}
+//             <Section
+//                 title="Fixture Rounds"
+//                 right={
+//                     <button
+//                         onClick={generateFixture}
+//                         disabled={generating || !selectedTournament}
+//                         className={clsx(
+//                             "inline-flex items-center gap-2 px-4 py-2 rounded font-medium",
+//                             generating || !selectedTournament ? "bg-gray-700 cursor-not-allowed" : "bg-yellow-500 hover:bg-yellow-600 text-black"
+//                         )}
+//                     >
+//                         {generating ? <RefreshCw size={16} className="animate-spin" /> : null}
+//                         {generating ? "Generating…" : "Generate Fixture"}
+//                     </button>
+//                 }
+//             >
+//                 {!selectedTournament ? (
+//                     <Empty>Select a tournament to view fixtures.</Empty>
+//                 ) : loadingRounds ? (
+//                     <Empty>Loading rounds…</Empty>
+//                 ) : fixtureRounds.length === 0 ? (
+//                     <Empty>No fixture available.</Empty>
+//                 ) : (
+//                     <div className="space-y-6">
+//                         {groupedRounds.map(([roundNum, list]) => (
+//                             <div key={roundNum} className="bg-gray-900 rounded-xl border border-gray-800">
+//                                 <div className="px-4 py-2 border-b border-gray-800 text-lg font-semibold">Round {roundNum}</div>
+//                                 <div className="divide-y divide-gray-800">
+//                                     {list.map((round) => (
+//                                         <div key={round.id} className="grid grid-cols-3 gap-4 p-3">
+//                                             <div className="truncate">{round.teamOneName || "TBD"}</div>
+//                                             <div className="text-center text-yellow-400 font-semibold">vs</div>
+//                                             <div className="truncate">{round.teamTwoName || "TBD"}</div>
+//                                         </div>
+//                                     ))}
+//                                 </div>
+//                             </div>
+//                         ))}
+//                     </div>
+//                 )}
+//             </Section>
+
+//             <footer className="py-8 text-center text-gray-500 text-sm">Admin Console — Cricket Manager</footer>
 //         </div>
-//     </div>
-//     </div>
-// );
+//     );
 // }

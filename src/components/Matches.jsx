@@ -7,19 +7,16 @@ const Matches = () => {
     const [fixtureRounds, setFixtureRounds] = useState({});
     const [selectedRound, setSelectedRound] = useState("");
 
+    // Load tournaments
     useEffect(() => {
         axios.get("http://localhost:8080/api/tournaments/get")
             .then((response) => {
-                if (Array.isArray(response.data)) {
-                    setTournaments(response.data);
-                } else {
-                    setTournaments([]);
-                }
+                setTournaments(Array.isArray(response.data) ? response.data : []);
             })
             .catch(() => setTournaments([]));
     }, []);
 
-    // Generate rounds when tournament is selected
+    // When a tournament is selected → fetch rounds (with matches)
     useEffect(() => {
         if (!selectedTournament) {
             setFixtureRounds({});
@@ -27,74 +24,40 @@ const Matches = () => {
             return;
         }
 
-        const teamNames =
-            selectedTournament.teamNames && selectedTournament.teamNames.length > 0
-                ? selectedTournament.teamNames
-                : selectedTournament.teams?.map(t => t.name) || [];
+        axios.get(`http://localhost:8080/api/round/tournament/${selectedTournament.id}`)
+            .then((res) => {
+                const rounds = res.data;
 
-        if (teamNames.length === 0) {
-            setFixtureRounds({});
-            setSelectedRound("");
-            return;
-        }
+                // ✅ Each round has its own matches array
+                const grouped = rounds.reduce((acc, round) => {
+                    const roundName = `Round ${round.roundNumber}`;
+                    if (!acc[roundName]) acc[roundName] = [];
+                    
+                    if (Array.isArray(round.matches)) {
+                        round.matches.forEach(match => {
+                            acc[roundName].push({
+                                id: match.id,
+                                team1: match.teamOneName,
+                                team2: match.teamTwoName,
+                                date: match.date || "",   // if you add in backend later
+                                time: match.time || "TBD"
+                            });
+                        });
+                    }
+                    return acc;
+                }, {});
 
-        let rounds = {};
-        const baseDate = new Date(selectedTournament.startDate);
-        let matchDates = [];
+                setFixtureRounds(grouped);
 
-        // Dates for Round 1
-        for (let i = 0; i < Math.ceil(teamNames.length / 2); i++) {
-            const d = new Date(baseDate);
-            d.setDate(baseDate.getDate() + i);
-            matchDates.push(
-                d.toLocaleDateString("en-GB", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                })
-            );
-        }
-
-        // Round 1 → actual team vs team
-        let round1 = [];
-        for (let i = 0, j = 0; i < teamNames.length; i += 2, j++) {
-            round1.push({
-                date: matchDates[j] || "",
-                team1: teamNames[i],
-                team2: teamNames[i + 1] || "TBD",
-                time: "3:00 PM",
+                // Select first round by default
+                if (Object.keys(grouped).length > 0) {
+                    setSelectedRound(Object.keys(grouped)[0]);
+                }
+            })
+            .catch(() => {
+                setFixtureRounds({});
+                setSelectedRound("");
             });
-        }
-        rounds["Round 1"] = round1;
-
-        // Round 2 → winners of round 1 (TBD vs TBD)
-        let round2 = [];
-        for (let i = 0; i < Math.ceil(round1.length / 2); i++) {
-            round2.push({
-                date: "", // can calculate later if needed
-                team1: "TBD",
-                team2: "TBD",
-                time: "TBD",
-            });
-        }
-        rounds["Round 2"] = round2;
-
-        // Round 3 (Final) → winner of round 2 (TBD vs TBD)
-        let round3 = [];
-        if (round2.length > 1) {
-            for (let i = 0; i < Math.ceil(round2.length / 2); i++) {
-                round3.push({
-                    date: "",
-                    team1: "TBD",
-                    team2: "TBD",
-                    time: "TBD",
-                });
-            }
-            rounds["Round 3"] = round3;
-        }
-
-        setFixtureRounds(rounds);
-        setSelectedRound("Round 1");
     }, [selectedTournament]);
 
     const roundTabs = Object.keys(fixtureRounds);
@@ -105,6 +68,7 @@ const Matches = () => {
                 <h1 className="text-4xl font-bold text-center mb-10">Scheduled Matches</h1>
 
                 {!selectedTournament ? (
+                    // Tournament List
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                         {tournaments.map((tournament) => (
                             <div
@@ -159,17 +123,17 @@ const Matches = () => {
                             ))}
                         </div>
 
-                        {/* Matches */}
+                        {/* Matches in selected round */}
                         <div className="space-y-3">
                             {selectedRound && fixtureRounds[selectedRound]?.length > 0 ? (
                                 fixtureRounds[selectedRound].map((match, index) => (
                                     <div
-                                        key={index}
+                                        key={match.id || index}
                                         className="bg-[#1a1a1a] border border-gray-700 rounded-md px-4 py-3 text-sm sm:text-base flex flex-col md:flex-row justify-between items-center text-center"
                                     >
-                                        <div className="w-full md:w-1/4 truncate font-medium">{match.team1}</div>
+                                        <div className="w-full md:w-1/4 truncate font-medium">{match.team1 || "TBD"}</div>
                                         <div className="w-full md:w-1/4 font-semibold text-yellow-300">vs</div>
-                                        <div className="w-full md:w-1/4 truncate font-medium">{match.team2}</div>
+                                        <div className="w-full md:w-1/4 truncate font-medium">{match.team2 || "TBD"}</div>
                                         <div className="w-full md:w-1/4 text-xs text-gray-400 mt-2 md:mt-0">
                                             {match.time} {match.date && `· ${match.date}`}
                                         </div>
@@ -187,7 +151,6 @@ const Matches = () => {
 };
 
 export default Matches;
-
 
 
 // import { useState } from "react";
