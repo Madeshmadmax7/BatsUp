@@ -67,10 +67,10 @@ export default function FixtureRounds({
 
     const groupedRounds = useMemo(() => {
         const map = new Map();
-        fixtureRounds.forEach((r) => {
-            const k = r.roundNumber;
+        fixtureRounds.forEach((round) => {
+            const k = round.roundNumber;
             if (!map.has(k)) map.set(k, []);
-            map.get(k).push(r);
+            map.get(k).push(round);
         });
         for (const [k, arr] of map.entries()) {
             arr.sort((a, b) => a.id - b.id);
@@ -105,27 +105,32 @@ export default function FixtureRounds({
             ) : (
                 <div className="space-y-6">
                     {groupedRounds.map(([roundNum, list]) => (
-                        <div key={roundNum} className="bg-gray-900 rounded-xl border border-gray-800">
+                        <div
+                            key={roundNum}
+                            className="bg-gray-900 rounded-xl border border-gray-800"
+                        >
                             <div className="px-4 py-2 border-b border-gray-800 text-lg font-semibold">
                                 Round {roundNum}
                             </div>
                             <div className="divide-y divide-gray-800">
-                                {list
-                                    // Filter out matches where either team is "TBD"
-                                    .filter(
-                                        (round) =>
-                                            round.teamOneName !== "TBD" && round.teamTwoName !== "TBD"
-                                    )
-                                    .map((round) => (
-                                        <div
-                                            key={round.id}
-                                            className="grid grid-cols-3 gap-4 p-3"
-                                        >
-                                            <div className="truncate">{round.teamOneName}</div>
-                                            <div className="text-center text-yellow-400 font-semibold">vs</div>
-                                            <div className="truncate">{round.teamTwoName}</div>
-                                        </div>
-                                    ))}
+                                {list.flatMap((round) =>
+                                    Array.isArray(round.matches)
+                                        ? round.matches
+                                            .filter((m) => m.teamOneName !== "TBD") // only filter out matches without teamOne
+                                            .map((m) => (
+                                                <div
+                                                    key={m.id}
+                                                    className="grid grid-cols-3 gap-4 p-3"
+                                                >
+                                                    <div className="truncate">{m.teamOneName}</div>
+                                                    <div className="text-center text-yellow-400 font-semibold">
+                                                        vs
+                                                    </div>
+                                                    <div className="truncate">{m.teamTwoName}</div>
+                                                </div>
+                                            ))
+                                        : []
+                                )}
                             </div>
                         </div>
                     ))}

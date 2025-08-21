@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import TournamentManagement from "./TournamentManagement";
 import TeamManagement from "./TeamManagement";
 import ScoreManagement from "./ScoreManagement";
@@ -17,11 +17,10 @@ export default function AdminPanel() {
 
     const [fixtureRounds, setFixtureRounds] = useState([]);
 
-    // Memoize onError to avoid re-creating function every render
-    const onError = useCallback((msg) => {
-        setError(msg);
-    }, []);
+    // Error setter wrapper for consistent error clearing
+    const onError = (msg) => setError(msg);
 
+    // When tournament changes, reset dependent states
     const handleTournamentSelect = (tournament) => {
         setSelectedTournament(tournament);
         setFixtureRounds([]);
@@ -39,7 +38,9 @@ export default function AdminPanel() {
 
             <TournamentManagement
                 selectedTournament={selectedTournament}
-                onTournamentSelect={handleTournamentSelect}
+                onTournamentSelect={(t) => {
+                    handleTournamentSelect(t);
+                }}
                 onError={onError}
             />
 

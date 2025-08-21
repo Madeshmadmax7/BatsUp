@@ -9,7 +9,7 @@ export default function NewsletterManagement({
     teams,
     selectedTournament,
     onTournamentSelect,
-    onError
+    onError,
 }) {
     const [newsletterList, setNewsletterList] = useState([]);
     const [loadingNews, setLoadingNews] = useState(false);
@@ -19,8 +19,17 @@ export default function NewsletterManagement({
         imageLink: "",
         tournamentId: "",
         teamId: "",
-        content: ""
+        content: "",
     });
+
+    // Sync newsletterForm.tournamentId with selectedTournament.id
+    useEffect(() => {
+        setNewsletterForm((f) => ({
+            ...f,
+            tournamentId: selectedTournament?.id || "",
+            teamId: "", // reset team selection when tournament changes
+        }));
+    }, [selectedTournament]);
 
     useEffect(() => {
         refreshNewsletters();
@@ -43,9 +52,9 @@ export default function NewsletterManagement({
 
     const handleFieldChange = (field, val) => {
         setNewsletterForm((p) => ({ ...p, [field]: val }));
-        // If tournament select, propagate tournament selection too
+        // If tournamentId changes, notify parent for state update
         if (field === "tournamentId") {
-            const t = tournaments.find(t => t.id === Number(val));
+            const t = tournaments.find((t) => t.id === Number(val));
             onTournamentSelect(t || null);
         }
     };
@@ -56,7 +65,9 @@ export default function NewsletterManagement({
         try {
             let teamName = "";
             if (newsletterForm.teamId) {
-                const team = teams.find((t) => Number(t.id) === Number(newsletterForm.teamId));
+                const team = teams.find(
+                    (t) => Number(t.id) === Number(newsletterForm.teamId)
+                );
                 teamName = team ? team.name : "";
             }
             const payload = { ...newsletterForm, teamName };
@@ -71,9 +82,9 @@ export default function NewsletterManagement({
                 subject: "",
                 summary: "",
                 imageLink: "",
-                tournamentId: "",
+                tournamentId: selectedTournament?.id || "",
                 teamId: "",
-                content: ""
+                content: "",
             });
             refreshNewsletters();
         } catch {
@@ -84,7 +95,9 @@ export default function NewsletterManagement({
     const deleteNewsletter = async (id) => {
         onError("");
         try {
-            const res = await fetch(`${API_BASE}/api/newsletter/${id}`, { method: "DELETE" });
+            const res = await fetch(`${API_BASE}/api/newsletter/${id}`, {
+                method: "DELETE",
+            });
             if (!res.ok) throw new Error("Delete failed");
             refreshNewsletters();
         } catch {
@@ -92,10 +105,15 @@ export default function NewsletterManagement({
         }
     };
 
-
     return (
-        <Section title="Newsletter Management" right={loadingNews ? <InlineSpinner /> : null}>
-            <form onSubmit={addNewsletter} className="bg-gray-900/60 p-5 rounded-xl border border-gray-800 max-w-xl space-y-4">
+        <Section
+            title="Newsletter Management"
+            right={loadingNews ? <InlineSpinner /> : null}
+        >
+            <form
+                onSubmit={addNewsletter}
+                className="bg-gray-900/60 p-5 rounded-xl border border-gray-800 max-w-xl space-y-4"
+            >
                 <input
                     type="text"
                     placeholder="Subject *"
@@ -121,7 +139,12 @@ export default function NewsletterManagement({
                 />
                 <select
                     value={newsletterForm.tournamentId}
-                    onChange={(e) => handleFieldChange("tournamentId", e.target.value === "" ? "" : Number(e.target.value))}
+                    onChange={(e) =>
+                        handleFieldChange(
+                            "tournamentId",
+                            e.target.value === "" ? "" : Number(e.target.value)
+                        )
+                    }
                     className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
                 >
                     <option value="">Select Tournament (optional)</option>
@@ -133,7 +156,12 @@ export default function NewsletterManagement({
                 </select>
                 <select
                     value={newsletterForm.teamId}
-                    onChange={(e) => handleFieldChange("teamId", e.target.value === "" ? "" : Number(e.target.value))}
+                    onChange={(e) =>
+                        handleFieldChange(
+                            "teamId",
+                            e.target.value === "" ? "" : Number(e.target.value)
+                        )
+                    }
                     className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
                     disabled={!selectedTournament || teams.length === 0}
                 >
@@ -152,7 +180,10 @@ export default function NewsletterManagement({
                     rows={4}
                     className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
                 />
-                <button type="submit" className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white">
+                <button
+                    type="submit"
+                    className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white"
+                >
                     Publish News
                 </button>
             </form>
@@ -164,14 +195,28 @@ export default function NewsletterManagement({
                     <Empty>No newsletters found.</Empty>
                 ) : (
                     newsletterList.map((nw) => (
-                        <article key={nw.id} className="bg-white rounded-xl shadow p-5 text-gray-900 relative">
-                            <button className="absolute top-2 right-2 text-red-600" onClick={() => deleteNewsletter(nw.id)} title="Delete Newsletter">
+                        <article
+                            key={nw.id}
+                            className="bg-white rounded-xl shadow p-5 text-gray-900 relative"
+                        >
+                            <button
+                                className="absolute top-2 right-2 text-red-600"
+                                onClick={() => deleteNewsletter(nw.id)}
+                                title="Delete Newsletter"
+                            >
                                 <Trash2 size={18} />
                             </button>
-                            {nw.imageLink && <img src={nw.imageLink} alt={nw.subject} className="w-full h-40 object-cover rounded mb-4" />}
+                            {nw.imageLink && (
+                                <img
+                                    src={nw.imageLink}
+                                    alt={nw.subject}
+                                    className="w-full h-40 object-cover rounded mb-4"
+                                />
+                            )}
                             <h3 className="text-xl font-semibold">{nw.subject}</h3>
                             <p className="text-sm font-medium text-gray-600 mb-1">
-                                Tournament ID: {nw.tournamentId || "N/A"} | Team: {nw.teamName || "N/A"}
+                                Tournament ID: {nw.tournamentId || "N/A"} | Team:{" "}
+                                {nw.teamName || "N/A"}
                             </p>
                             <p className="mb-2">{nw.summary}</p>
                             <p className="mb-2">{nw.content}</p>

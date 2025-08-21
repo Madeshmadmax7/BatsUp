@@ -16,7 +16,6 @@ const Matches = () => {
             .catch(() => setTournaments([]));
     }, []);
 
-    // When a tournament is selected → fetch rounds (with matches)
     useEffect(() => {
         if (!selectedTournament) {
             setFixtureRounds({});
