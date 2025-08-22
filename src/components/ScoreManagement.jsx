@@ -1,213 +1,244 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Trash2, Plus, X } from "lucide-react";
+import axios from "axios";
 import { Section } from "./SharedComponents";
 
 const API_BASE = "http://localhost:8080";
 
-// Score Management Modal Component
-function ScoreManagementPopup({
-    team,
-    players,
-    entries,
-    onAddEntry,
-    onUpdateEntry,
-    onDeleteEntry,
-    onClose,
-}) {
-    const [localEntries, setLocalEntries] = useState(entries || []);
-    const [savingId, setSavingId] = useState(null);
-
-    useEffect(() => setLocalEntries(entries || []), [entries]);
-
-    const addNewForPlayer = async (playerId) => {
-        try {
-            await onAddEntry(playerId);
-        } catch (e) {
-            console.error(e);
+async function fetchWithError(url, description, options) {
+    try {
+        const res = await fetch(url, options);
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`${description} failed: ${res.status} - ${text}`);
         }
-    };
+        return await res.json();
+    } catch (e) {
+        throw new Error(`Failed to ${description}: ${e.message}`);
+    }
+}
 
-    const updateField = (id, field, value) => {
-        setLocalEntries((prev) =>
-            prev.map((e) => (e.id === id ? { ...e, [field]: value } : e))
+function ScoreManagementPopup({ team, players, entries, onAdd, onUpdate, onDelete, onClose }) {
+    const [localEntries, setLocalEntries] = useState([]);
+    const [savingId, setSavingId] = useState(null);
+    const [activeTeamId, setActiveTeamId] = useState(team.teamOneId);
+
+    useEffect(() => {
+        if (Array.isArray(entries)) setLocalEntries(entries);
+        else setLocalEntries([]);
+    }, [entries]);
+
+    const filteredPlayers = useMemo(
+        () => players.filter((p) => p.teamId === activeTeamId),
+        [players, activeTeamId]
+    );
+    const filteredScorecards = useMemo(
+        () => localEntries.filter((c) => c.teamId === activeTeamId),
+        [localEntries, activeTeamId]
+    );
+
+    const usedPlayerIds = new Set(filteredScorecards.map((c) => c.playerId));
+    const availablePlayers = filteredPlayers.filter((p) => !usedPlayerIds.has(p.id));
+
+    const totals = filteredScorecards.reduce(
+        (acc, c) => {
+            acc.runs += c.runs || 0;
+            acc.wickets += c.wickets || 0;
+            acc.catches += c.catches || 0;
+            return acc;
+        },
+        { runs: 0, wickets: 0, catches: 0 }
+    );
+
+    function playerName(id) {
+        const p = players.find((pl) => pl.id === id);
+        return p ? p.nickname || p.name || `#${p.jerseyNumber || "N/A"}` : "Unknown";
+    }
+
+    async function handleAddPlayer(playerId) {
+        try {
+            await onAdd(playerId);
+        } catch (e) {
+            alert("Error adding player: " + e.message);
+        }
+    }
+
+    function updateField(id, field, value) {
+        setLocalEntries((old) =>
+            old.map((e) => (e.id === id ? { ...e, [field]: value } : e))
         );
-    };
+    }
 
-    const saveRow = async (entry) => {
+    async function saveRow(entry) {
+        if (!entry.id) return; // Only update if valid ID
         setSavingId(entry.id);
         try {
-            await onUpdateEntry(entry.id, {
+            await onUpdate(entry.id, {
                 runs: Number(entry.runs) || 0,
                 wickets: Number(entry.wickets) || 0,
                 catches: Number(entry.catches) || 0,
                 playerId: entry.playerId,
-                teamId: team.id,
-                matchId: entry.matchId ?? null,
+                teamId: activeTeamId,
+                matchId: entry.matchId,
             });
         } finally {
             setSavingId(null);
         }
-    };
+    }
 
-    const usedPlayerIds = new Set(localEntries.map((e) => Number(e.playerId)));
-    const availablePlayers = players.filter((p) => !usedPlayerIds.has(Number(p.id)));
-
-    const playerName = (playerId) => {
-        const p = players.find((pp) => Number(pp.id) === Number(playerId));
-        return p ? p.nickname || p.name || `#${p.jerseyNumber}` : "Unknown";
-    };
-
-    const totals = {
-        runs: localEntries.reduce((a, e) => a + (Number(e.runs) || 0), 0),
-        wickets: localEntries.reduce((a, e) => a + (Number(e.wickets) || 0), 0),
-        catches: localEntries.reduce((a, e) => a + (Number(e.catches) || 0), 0),
-    };
+    const canEdit = (entry) => Boolean(entry.id);
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75"
             onClick={onClose}
         >
             <div
-                className="bg-gray-900 border border-gray-800 rounded-2xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto"
+                className="bg-gray-900 border border-gray-800 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-auto p-6"
+                style={{ minHeight: 300 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-bold">
-                        Manage Scores — {team?.teamOneName} vs {team?.teamTwoName}
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-white">
+                        Manage Scores — {team.teamOneName} vs {team.teamTwoName}
                     </h3>
-                    <button onClick={onClose} className="p-2 rounded hover:bg-gray-800">
-                        <X size={18} />
+                    <button onClick={onClose} className="p-2 rounded hover:bg-gray-800 text-white">
+                        <X size={20} />
                     </button>
                 </div>
 
-                {/* Totals */}
-                <div className="grid grid-cols-3 gap-3 mb-6 text-center">
-                    <div className="bg-gray-800 rounded p-3">
-                        <div className="text-xs text-gray-300">Team Runs</div>
-                        <div className="text-xl font-semibold">{totals.runs}</div>
-                    </div>
-                    <div className="bg-gray-800 rounded p-3">
-                        <div className="text-xs text-gray-300">Team Wickets</div>
-                        <div className="text-xl font-semibold">{totals.wickets}</div>
-                    </div>
-                    <div className="bg-gray-800 rounded p-3">
-                        <div className="text-xs text-gray-300">Team Catches</div>
-                        <div className="text-xl font-semibold">{totals.catches}</div>
-                    </div>
+                {/* Tabs for team selection */}
+                <div className="flex mb-4 gap-2">
+                    {[team.teamOneId, team.teamTwoId].map((tid) => {
+                        const isActive = tid === activeTeamId;
+                        const name = tid === team.teamOneId ? team.teamOneName : team.teamTwoName;
+                        return (
+                            <button
+                                key={tid}
+                                onClick={() => setActiveTeamId(tid)}
+                                className={`px-4 py-2 rounded ${isActive ? "bg-blue-700 text-white" : "bg-gray-700 text-gray-300"
+                                    }`}
+                            >
+                                {name}
+                            </button>
+                        );
+                    })}
                 </div>
 
-                {/* Add Player */}
-                <div className="mb-6 flex gap-3 items-center">
+                {/* Team totals */}
+                <div className="grid grid-cols-3 mb-4 text-white text-center gap-4">
+                    <div className="bg-gray-800 p-3 rounded">Runs: {totals.runs}</div>
+                    <div className="bg-gray-800 p-3 rounded">Wickets: {totals.wickets}</div>
+                    <div className="bg-gray-800 p-3 rounded">Catches: {totals.catches}</div>
+                </div>
+
+                {/* Add player selector */}
+                <div className="flex mb-4 gap-2">
                     <select
                         id="add-player-select"
-                        className="bg-gray-700 p-2 rounded text-white flex-1"
+                        className="flex-grow p-2 rounded bg-gray-700 text-white"
                         defaultValue=""
                         onChange={(e) => {
-                            const val = e.target.value;
-                            if (!val) return;
-                            addNewForPlayer(Number(val));
+                            if (!e.target.value) return;
+                            handleAddPlayer(Number(e.target.value));
                             e.target.value = "";
                         }}
                     >
                         <option value="">Select player to add...</option>
+                        {availablePlayers.length === 0 && (
+                            <option disabled>No more available players</option>
+                        )}
                         {availablePlayers.map((p) => (
                             <option key={p.id} value={p.id}>
-                                #{p.jerseyNumber} — {p.nickname || p.name}
+                                {p.nickname || p.name || `#${p.jerseyNumber || "N/A"}`}
                             </option>
                         ))}
                     </select>
                     <button
+                        className="bg-green-600 hover:bg-green-700 text-white rounded px-4 py-2 flex items-center gap-2"
                         onClick={() => {
-                            const sel = document.getElementById("add-player-select");
-                            if (sel && sel.value) {
-                                addNewForPlayer(Number(sel.value));
-                                sel.value = "";
+                            const select = document.getElementById("add-player-select");
+                            if (select?.value) {
+                                handleAddPlayer(Number(select.value));
+                                select.value = "";
                             }
                         }}
-                        className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
                     >
                         <Plus size={16} /> Add
                     </button>
                 </div>
 
-                {availablePlayers.length === 0 && (
-                    <p className="mb-4 text-xs text-gray-400">
-                        All team players are added to this scorecard.
-                    </p>
-                )}
-
-                {/* Score table */}
-                <table className="w-full text-sm text-white table-auto mb-3 border-collapse border border-gray-700">
-                    <thead>
-                        <tr>
-                            <th className="border border-gray-700 px-2 py-1 text-left">Player</th>
-                            <th className="border border-gray-700 px-2 py-1 text-center">Runs</th>
-                            <th className="border border-gray-700 px-2 py-1 text-center">Wickets</th>
-                            <th className="border border-gray-700 px-2 py-1 text-center">Catches</th>
-                            <th className="border border-gray-700 px-2 py-1 text-center">Delete</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {localEntries.length === 0 ? (
-                            <tr>
-                                <td
-                                    colSpan={5}
-                                    className="border border-gray-700 px-2 py-2 text-gray-500 text-center"
-                                >
-                                    No player entries yet.
-                                </td>
+                {/* Scorecard table */}
+                {filteredScorecards.length === 0 ? (
+                    <p className="text-center text-gray-400 py-10">No scores added for this team.</p>
+                ) : (
+                    <table className="w-full border border-gray-700 text-white table-auto">
+                        <thead>
+                            <tr className="bg-gray-800">
+                                <th className="p-2 text-left border">Player</th>
+                                <th className="p-2 border text-center">Runs</th>
+                                <th className="p-2 border text-center">Wickets</th>
+                                <th className="p-2 border text-center">Catches</th>
+                                <th className="p-2 border text-center">Delete</th>
                             </tr>
-                        ) : (
-                            localEntries.map((e) => (
-                                <tr key={e.id}>
-                                    <td className="border border-gray-700 px-2 py-1">{playerName(e.playerId)}</td>
-                                    <td className="border border-gray-700 px-2 py-1 text-center">
+                        </thead>
+                        <tbody>
+                            {filteredScorecards.map((entry) => (
+                                <tr key={entry.id} className="hover:bg-gray-700">
+                                    <td className="p-2 border">{playerName(entry.playerId)}</td>
+                                    <td className="p-2 border text-center">
                                         <input
                                             type="number"
-                                            value={e.runs ?? 0}
-                                            onChange={(ev) => updateField(e.id, "runs", ev.target.value)}
-                                            onBlur={() => saveRow(e)}
-                                            className="bg-gray-700 w-20 p-1 rounded text-white text-center"
+                                            min={0}
+                                            value={entry.runs ?? 0}
+                                            disabled={!canEdit(entry) || savingId === entry.id}
+                                            className="w-20 bg-gray-700 rounded px-2 text-center"
+                                            onChange={(e) => updateField(entry.id, "runs", e.target.value)}
+                                            onBlur={() => saveRow(entry)}
                                         />
                                     </td>
-                                    <td className="border border-gray-700 px-2 py-1 text-center">
+                                    <td className="p-2 border text-center">
                                         <input
                                             type="number"
-                                            value={e.wickets ?? 0}
-                                            onChange={(ev) => updateField(e.id, "wickets", ev.target.value)}
-                                            onBlur={() => saveRow(e)}
-                                            className="bg-gray-700 w-20 p-1 rounded text-white text-center"
+                                            min={0}
+                                            value={entry.wickets ?? 0}
+                                            disabled={!canEdit(entry) || savingId === entry.id}
+                                            className="w-20 bg-gray-700 rounded px-2 text-center"
+                                            onChange={(e) => updateField(entry.id, "wickets", e.target.value)}
+                                            onBlur={() => saveRow(entry)}
                                         />
                                     </td>
-                                    <td className="border border-gray-700 px-2 py-1 text-center">
+                                    <td className="p-2 border text-center">
                                         <input
                                             type="number"
-                                            value={e.catches ?? 0}
-                                            onChange={(ev) => updateField(e.id, "catches", ev.target.value)}
-                                            onBlur={() => saveRow(e)}
-                                            className="bg-gray-700 w-20 p-1 rounded text-white text-center"
+                                            min={0}
+                                            value={entry.catches ?? 0}
+                                            disabled={!canEdit(entry) || savingId === entry.id}
+                                            className="w-20 bg-gray-700 rounded px-2 text-center"
+                                            onChange={(e) => updateField(entry.id, "catches", e.target.value)}
+                                            onBlur={() => saveRow(entry)}
                                         />
                                     </td>
-                                    <td className="border border-gray-700 px-2 py-1 text-center">
+                                    <td className="p-2 border text-center">
                                         <button
-                                            className="text-red-500 hover:text-red-600"
-                                            title="Delete Player Entry"
-                                            onClick={() => onDeleteEntry(e.id)}
+                                            disabled={savingId === entry.id}
+                                            className="text-red-600"
+                                            title="Delete"
+                                            onClick={() => onDelete(entry.id)}
                                         >
-                                            <Trash2 size={18} />
+                                            <Trash2 size={20} />
                                         </button>
                                     </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
 
-                <div className="flex justify-end mt-6">
+                <div className="mt-6 flex justify-end">
                     <button
                         onClick={onClose}
-                        className="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-4 py-2"
+                        className="px-4 py-2 rounded bg-gray-800 text-white hover:bg-gray-700"
                     >
                         Close
                     </button>
@@ -217,142 +248,153 @@ function ScoreManagementPopup({
     );
 }
 
-// Main Score Management Component
-export default function ScoreManagement({
-    fixtureRounds,
-    teams,
-    allPlayers,
-    onError,
-    onScorecardsRefresh,
-}) {
+export default function MatchScoreManagement() {
+    const [matches, setMatches] = useState([]);
+    const [teams, setTeams] = useState([]);
+    const [players, setPlayers] = useState([]);
     const [scorecards, setScorecards] = useState([]);
-    const [loadingScorecards, setLoadingScorecards] = useState(false);
     const [selectedMatch, setSelectedMatch] = useState(null);
+    const [loadingScores, setLoadingScores] = useState(false);
+    const [error, setError] = useState("");
 
-    const getPlayersByTeamName = (teamName) => {
-        const team = teams.find((t) => t.name === teamName);
-        if (!team) return [];
-        return allPlayers.filter((p) => Number(p.teamId) === Number(team.id));
-    };
+    useEffect(() => {
+        async function fetchAll() {
+            try {
+                const matches = await fetchWithError(`${API_BASE}/api/matches/all`, "matches");
+                const teams = await fetchWithError(`${API_BASE}/api/team/all`, "teams");
+                const players = await fetchWithError(`${API_BASE}/api/player/all`, "players");
+                setMatches(Array.isArray(matches) ? matches : []);
+                setTeams(Array.isArray(teams) ? teams : []);
+                setPlayers(Array.isArray(players) ? players : []);
+            } catch (e) {
+                setError(e.message);
+            }
+        }
+        fetchAll();
+    }, []);
 
-    const matchPlayers = useMemo(() => {
-        if (!selectedMatch) return [];
-        return [...getPlayersByTeamName(selectedMatch.teamOneName), ...getPlayersByTeamName(selectedMatch.teamTwoName)];
-    }, [selectedMatch, teams, allPlayers]);
-
-    const matchScorecards = useMemo(() => {
-        if (!selectedMatch) return [];
-        return scorecards.filter((s) => s.matchId === selectedMatch.id);
-    }, [selectedMatch, scorecards]);
-
-    const refreshScorecards = async () => {
+    useEffect(() => {
         if (!selectedMatch) {
             setScorecards([]);
             return;
         }
-        setLoadingScorecards(true);
-        onError("");
-        try {
-            const res = await fetch(`${API_BASE}/api/scorecard/match/${selectedMatch.id}`);
-            const data = await res.json();
-            setScorecards(Array.isArray(data) ? data : []);
-            if (onScorecardsRefresh) onScorecardsRefresh(data);
-        } catch {
-            onError("Failed to load scorecards.");
-            setScorecards([]);
-        } finally {
-            setLoadingScorecards(false);
-        }
-    };
-
-    useEffect(() => {
-        refreshScorecards();
+        let cancelled = false;
+        setLoadingScores(true);
+        setError("");
+        fetchWithError(`${API_BASE}/api/scorecard/${selectedMatch.id}`, "scorecards")
+            .then((data) => {
+                if (!cancelled) setScorecards(data);
+            })
+            .catch((e) => {
+                if (!cancelled) setError(e.message);
+            })
+            .finally(() => {
+                if (!cancelled) setLoadingScores(false);
+            });
+        return () => {
+            cancelled = true;
+        };
     }, [selectedMatch]);
 
-    const addPlayerScoreEntry = async (playerId) => {
+    const matchPlayers = useMemo(() => {
+        if (!selectedMatch) return [];
+        return players.filter(
+            (p) => p.teamId === selectedMatch.teamOneId || p.teamId === selectedMatch.teamTwoId
+        );
+    }, [players, selectedMatch]);
+
+    async function addScoreEntry(playerId) {
         if (!selectedMatch) return;
         const player = matchPlayers.find((p) => p.id === playerId);
         if (!player) return;
-        const payload = {
-            runs: 0,
-            wickets: 0,
-            catches: 0,
-            playerId,
-            teamId: player.teamId,
-            matchId: selectedMatch.id,
-        };
-        await fetch(`${API_BASE}/api/scorecard/create`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-        });
-        refreshScorecards();
-    };
 
-    const updateScoreEntry = async (id, patch) => {
-        const current = scorecards.find((s) => s.id === id);
-        if (!current) return;
-        const dto = {
-            id,
-            runs: patch.runs ?? current.runs,
-            wickets: patch.wickets ?? current.wickets,
-            catches: patch.catches ?? current.catches,
-            playerId: patch.playerId ?? current.playerId,
-            teamId: patch.teamId ?? current.teamId,
-            matchId: patch.matchId ?? current.matchId,
-        };
-        await fetch(`${API_BASE}/api/scorecard/${id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(dto),
-        });
-        refreshScorecards();
-    };
+        try {
+            await fetchWithError(`${API_BASE}/api/scorecard/create`, "creating scorecard", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    runs: 0,
+                    wickets: 0,
+                    catches: 0,
+                    playerId,
+                    teamId: player.teamId,
+                    matchId: selectedMatch.id,
+                }),
+            });
+            const newCards = await fetchWithError(`${API_BASE}/api/scorecard/${selectedMatch.id}`, "fetching scorecards");
+            setScorecards(newCards);
+        } catch (e) {
+            alert(`Error creating scorecard: ${e.message}`);
+        }
+    }
 
-    const deleteScoreEntry = async (id) => {
-        await fetch(`${API_BASE}/api/scorecard/${id}`, { method: "DELETE" });
-        refreshScorecards();
-    };
+    async function updateScoreEntry(id, patch) {
+        try {
+            await fetchWithError(`${API_BASE}/api/scorecard/${id}`, "updating scorecard", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(patch),
+            });
+            const newCards = await fetchWithError(`${API_BASE}/api/scorecard/${selectedMatch.id}`, "fetching scorecards");
+            setScorecards(newCards);
+        } catch (e) {
+            alert(`Error updating scorecard: ${e.message}`);
+        }
+    }
+
+    async function deleteScoreEntry(id) {
+        try {
+            await fetchWithError(`${API_BASE}/api/scorecard/${id}`, "deleting scorecard", {
+                method: "DELETE",
+            });
+            const newCards = await fetchWithError(`${API_BASE}/api/scorecard/${selectedMatch.id}`, "fetching scorecards");
+            setScorecards(newCards);
+        } catch (e) {
+            alert(`Error deleting scorecard: ${e.message}`);
+        }
+    }
 
     return (
-        <Section title="Score Management">
-            <label className="block mb-2 font-semibold text-lg">Select Match to Manage Scores:</label>
+        <Section title="Match Score Management">
+            {error && <p className="text-red-600 mb-2">{error}</p>}
+            <label htmlFor="match-select" className="block mb-2 font-semibold">
+                Select Match
+            </label>
             <select
-                className="mb-4 p-2 rounded w-full max-w-md bg-gray-800 text-white border border-gray-700"
-                value={selectedMatch ? selectedMatch.id : ""}
+                id="match-select"
+                value={selectedMatch?.id || ""}
+                className="w-full p-2 rounded border border-gray-600 mb-4"
                 onChange={(e) => {
-                    const val = e.target.value;
-                    if (!val) {
-                        setSelectedMatch(null);
-                        return;
-                    }
-                    const match = fixtureRounds.find((m) => m.id.toString() === val);
+                    const id = Number(e.target.value);
+                    const match = matches.find((m) => m.id === id);
                     setSelectedMatch(match || null);
                 }}
             >
-                <option value="">-- Select Match --</option>
-                {fixtureRounds.map((m) => (
-                    <option key={m.id} value={m.id}>
-                        {m.teamOneName || "TBD"} vs {m.teamTwoName || "TBD"}
-                    </option>
-                ))}
+                <option value="">-- Select a Match --</option>
+                {matches
+                    .filter((m) => m.teamOneId && m.teamTwoId)
+                    .map((m) => (
+                        <option key={m.id} value={m.id}>
+                            {m.teamOneName} vs {m.teamTwoName}
+                        </option>
+                    ))}
             </select>
 
-            {loadingScorecards && <p>Loading scorecards…</p>}
+            {loadingScores && <p>Loading scores...</p>}
 
-            {!selectedMatch ? (
-                <p className="text-gray-400 italic">Please select a match above to manage scores.</p>
-            ) : (
+            {selectedMatch && (
                 <ScoreManagementPopup
                     team={selectedMatch}
                     players={matchPlayers}
-                    entries={matchScorecards}
-                    onAddEntry={addPlayerScoreEntry}
-                    onUpdateEntry={updateScoreEntry}
-                    onDeleteEntry={deleteScoreEntry}
+                    entries={scorecards}
+                    onAdd={addScoreEntry}
+                    onUpdate={updateScoreEntry}
+                    onDelete={deleteScoreEntry}
                     onClose={() => setSelectedMatch(null)}
                 />
             )}
+
+            {!selectedMatch && !loadingScores && <p>Please select a match to manage scores.</p>}
         </Section>
     );
 }

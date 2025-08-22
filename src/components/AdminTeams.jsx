@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import TournamentManagement from "./TournamentManagement";
 import TeamManagement from "./TeamManagement";
 import ScoreManagement from "./ScoreManagement";
-import NewsletterManagement from "./NewsLetterManagement";
+import NewsletterManagement from "./NewsletterManagement";
 import FixtureRounds from "./FixtureRounds";
 import { ErrorNote } from "./SharedComponents";
 
@@ -17,16 +17,28 @@ export default function AdminPanel() {
 
     const [fixtureRounds, setFixtureRounds] = useState([]);
 
-    // Error setter wrapper for consistent error clearing
-    const onError = (msg) => setError(msg);
+    // Memoized error setter to keep stable reference
+    const onError = useCallback((msg) => {
+        setError(msg);
+    }, []);
 
-    // When tournament changes, reset dependent states
-    const handleTournamentSelect = (tournament) => {
+    // Memoized teams change handler
+    const onTeamsChange = useCallback((updatedTeams) => {
+        setTeams(updatedTeams);
+    }, []);
+
+    // Memoized players change handler
+    const onPlayersChange = useCallback((players) => {
+        setAllPlayers(players);
+    }, []);
+
+    // When tournament changes, reset dependent state
+    const handleTournamentSelect = useCallback((tournament) => {
         setSelectedTournament(tournament);
         setFixtureRounds([]);
         setTeams([]);
         setAllPlayers([]);
-    };
+    }, []);
 
     return (
         <div className="p-6 max-w-7xl mx-auto bg-black min-h-screen text-white space-y-10">
@@ -38,17 +50,15 @@ export default function AdminPanel() {
 
             <TournamentManagement
                 selectedTournament={selectedTournament}
-                onTournamentSelect={(t) => {
-                    handleTournamentSelect(t);
-                }}
+                onTournamentSelect={handleTournamentSelect}
                 onError={onError}
             />
 
             <TeamManagement
                 selectedTournament={selectedTournament}
                 onError={onError}
-                onTeamsChange={setTeams}
-                onPlayersChange={setAllPlayers}
+                onTeamsChange={onTeamsChange}
+                onPlayersChange={onPlayersChange}
             />
 
             <ScoreManagement
@@ -79,7 +89,6 @@ export default function AdminPanel() {
         </div>
     );
 }
-
 
 // // import React, { useState, useEffect } from "react";
 // // import { useAuth } from "../AuthContext";
