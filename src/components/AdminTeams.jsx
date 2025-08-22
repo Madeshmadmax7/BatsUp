@@ -4,6 +4,7 @@ import TeamManagement from "./TeamManagement";
 import ScoreManagement from "./ScoreManagement";
 import NewsletterManagement from "./NewsletterManagement";
 import FixtureRounds from "./FixtureRounds";
+import LeaderBoard from "./LeaderBoard";
 import { ErrorNote } from "./SharedComponents";
 
 export default function AdminPanel() {
@@ -82,6 +83,7 @@ export default function AdminPanel() {
                 setFixtureRounds={setFixtureRounds}
                 onError={onError}
             />
+            <LeaderBoard onError={onError} />
 
             <footer className="py-8 text-center text-gray-500 text-sm">
                 Admin Console — Cricket Manager
