@@ -20,7 +20,7 @@ export default function NewsletterManagement({ onError }) {
         content: "",
     });
 
-    // Fetch all tournaments on mount
+    // Fetch tournaments and newsletters at mount
     useEffect(() => {
         const fetchTournaments = async () => {
             setLoadingTournaments(true);
@@ -40,13 +40,12 @@ export default function NewsletterManagement({ onError }) {
         refreshNewsletters();
     }, []);
 
-    // Fetch teams whenever a tournament is selected
+    // Fetch teams when a tournament is selected
     useEffect(() => {
         if (!selectedTournament) {
             setTeams([]);
             return;
         }
-
         const fetchTeams = async () => {
             try {
                 const res = await fetch(
@@ -59,11 +58,10 @@ export default function NewsletterManagement({ onError }) {
                 setTeams([]);
             }
         };
-
         fetchTeams();
     }, [selectedTournament]);
 
-    // Sync form tournamentId with selectedTournament
+    // Reset form tournamentId/teamId when tournament changes
     useEffect(() => {
         setNewsletterForm((f) => ({
             ...f,
@@ -72,6 +70,7 @@ export default function NewsletterManagement({ onError }) {
         }));
     }, [selectedTournament]);
 
+    // Fetch newsletters
     const refreshNewsletters = async () => {
         setLoadingNews(true);
         onError("");
@@ -87,6 +86,7 @@ export default function NewsletterManagement({ onError }) {
         }
     };
 
+    // Handle form fields
     const handleFieldChange = (field, val) => {
         setNewsletterForm((p) => ({ ...p, [field]: val }));
         if (field === "tournamentId") {
@@ -95,20 +95,12 @@ export default function NewsletterManagement({ onError }) {
         }
     };
 
+    // Create newsletter
     const addNewsletter = async (e) => {
         e.preventDefault();
         onError("");
         try {
-            let teamName = "";
-            if (newsletterForm.teamId) {
-                const team = teams.find(
-                    (t) => Number(t.id) === Number(newsletterForm.teamId)
-                );
-                teamName = team ? team.name : "";
-            }
-            const payload = { ...newsletterForm, teamName };
-            delete payload.teamId;
-
+            const payload = { ...newsletterForm };
             const res = await fetch(`${API_BASE}/api/newsletter/create`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -131,6 +123,7 @@ export default function NewsletterManagement({ onError }) {
         }
     };
 
+    // Delete newsletter
     const deleteNewsletter = async (id) => {
         onError("");
         try {
@@ -144,11 +137,27 @@ export default function NewsletterManagement({ onError }) {
         }
     };
 
+    // Resolve names
+    const resolveTournamentName = (id) => {
+        if (!id) return "N/A";
+        const t = tournaments.find((t) => Number(t.id) === Number(id));
+        return t ? t.name : "N/A";
+    };
+
+    const resolveTeamName = (id, tournamentId) => {
+        if (!id) return "N/A";
+        const t = tournaments.find((t) => Number(t.id) === Number(tournamentId));
+        if (!t) return "N/A";
+        const tm = teams.find((tm) => Number(tm.id) === Number(id));
+        return tm ? tm.name : "N/A";
+    };
+
     return (
         <Section
             title="Newsletter Management"
             right={loadingNews || loadingTournaments ? <InlineSpinner /> : null}
         >
+            {/* Newsletter Form */}
             <form
                 onSubmit={addNewsletter}
                 className="bg-gray-900/60 p-5 rounded-xl border border-gray-800 max-w-xl space-y-4"
@@ -224,6 +233,7 @@ export default function NewsletterManagement({ onError }) {
                 </button>
             </form>
 
+            {/* Newsletters List */}
             <div className="mt-6 grid sm:grid-cols-2 md:grid-cols-3 gap-6">
                 {loadingNews ? (
                     <Empty>Loading newsletters…</Empty>
@@ -251,8 +261,8 @@ export default function NewsletterManagement({ onError }) {
                             )}
                             <h3 className="text-xl font-semibold">{nw.subject}</h3>
                             <p className="text-sm font-medium text-gray-600 mb-1">
-                                Tournament ID: {nw.tournamentId || "N/A"} | Team:{" "}
-                                {nw.teamName || "N/A"}
+                                Tournament: {resolveTournamentName(nw.tournamentId)} | Team:{" "}
+                                {resolveTeamName(nw.teamId, nw.tournamentId)}
                             </p>
                             <p className="mb-2">{nw.summary}</p>
                             <p className="mb-2">{nw.content}</p>

@@ -17,6 +17,7 @@ import { AuthProvider } from './AuthContext';
 import NewsLetter from './components/NewsLetter';
 import LiveScores from './components/LiveScores';
 import TeamsPage from './components/TeamsPage';
+import RegisteredTournaments from './components/RegisteredTournaments';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -44,6 +45,7 @@ function App() {
           <Route path="/registered" element={<Registered />} />
           <Route path="/newsletter" element={<NewsLetter />} />
           <Route path="/scores" element={<LiveScores />} />
+          <Route path="/registeredTournaments" element={<RegisteredTournaments />} />
         </Routes>
         <FooterPage />
       </Router>

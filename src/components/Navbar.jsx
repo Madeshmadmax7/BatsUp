@@ -24,7 +24,7 @@ const Navbar = () => {
         { name: "Tournaments", to: "/tournaments" },
         { name: "Fixtures", to: "/fixtures" },
         { name: "Scores", to: "/scores" },
-        { name: "Registered", to: "/registered" },
+        { name: "Registered", to: "/registeredTournaments" },
         { name: "About", to: "/about" },
     ];
 

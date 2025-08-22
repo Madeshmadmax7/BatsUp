@@ -28,7 +28,10 @@ const NewsLetter = () => {
     const [fan, setFan] = useState(null);
     const fanId = user?.fanId ?? fan?.id ?? null;
 
-    // Load base lists
+    // Popup state
+    const [popupOpen, setPopupOpen] = useState(false);
+    const [selectedNews, setSelectedNews] = useState(null);
+
     useEffect(() => {
         axios.get("http://localhost:8080/api/team/all")
             .then((r) => setTeams(r.data))
@@ -59,7 +62,6 @@ const NewsLetter = () => {
         })();
     }, [role, user?.id, user?.fanId, setUser]);
 
-    // If we have fanId but not the object, fetch it
     useEffect(() => {
         if (role !== "FAN" || !fanId) return;
         (async () => {
@@ -73,7 +75,6 @@ const NewsLetter = () => {
     const favTeamIds = useMemo(() => new Set(fan?.followedTeamIds || []), [fan]);
     const favTournamentIds = useMemo(() => new Set(fan?.followedTournamentIds || []), [fan]);
     const favTeamNames = useMemo(() => {
-        // Build set of team names from teams with ids in fan.followedTeamIds for fallback name match
         const set = new Set();
         if (teams?.length && favTeamIds.size) {
             teams.forEach((t) => {
@@ -163,16 +164,25 @@ const NewsLetter = () => {
                 <span className="text-center leading-tight max-w-[5rem] break-words text-xs sm:text-sm">
                     {tr.tournamentName}
                 </span>
-
                 <span className="text-lg leading-none">{isFav ? "−" : "+"}</span>
             </button>
         );
     };
 
+    const handleCardClick = (item) => {
+        setSelectedNews(item);
+        setPopupOpen(true);
+    };
+
+    const closePopup = () => {
+        setPopupOpen(false);
+        setSelectedNews(null);
+    };
 
     const Card = ({ item }) => (
         <article
-            className="bg-white text-black rounded-xl shadow-lg overflow-hidden transform transition hover:shadow-2xl hover:scale-105"
+            onClick={() => handleCardClick(item)}
+            className="bg-white text-black rounded-xl shadow-lg overflow-hidden transform transition hover:shadow-2xl hover:scale-105 cursor-pointer"
         >
             {item.imageLink ? (
                 <img
@@ -183,11 +193,12 @@ const NewsLetter = () => {
                 />
             ) : null}
             <div className="p-6">
-                <h3 className="text-xl font-semibold mb-2 cursor-pointer">{item.subject}</h3>
+                <h3 className="text-xl font-semibold mb-2">{item.subject}</h3>
                 <p className="mb-4">{item.summary}</p>
                 <p className="text-sm text-gray-600">
                     {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ""}
                     {item.teamName ? ` | ${item.teamName}` : ""}
+                    {item.tournamentName ? ` | ${item.tournamentName}` : ""}
                 </p>
             </div>
         </article>
@@ -240,12 +251,51 @@ const NewsLetter = () => {
                     {(role === "FAN" ? others : newsData).map((item) => <Card key={item.id} item={item} />)}
                 </div>
             </section>
+
+            {/* Popup */}
+            {/* Popup */}
+            {popupOpen && selectedNews && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white text-black rounded-xl shadow-xl p-6 max-w-md w-full relative">
+                        <button
+                            onClick={closePopup}
+                            className="absolute top-2 right-2 text-gray-600 hover:text-black"
+                        >
+                            ✖
+                        </button>
+
+                        {/* Image Container */}
+                        <div className="w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
+                            {selectedNews.imageLink ? (
+                                <img
+                                    src={selectedNews.imageLink}
+                                    alt={selectedNews.subject}
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <span className="text-gray-500">No Image</span>
+                            )}
+                        </div>
+
+                        <h2 className="text-2xl font-bold mb-4">{selectedNews.subject}</h2>
+                        <p className="mb-2">{selectedNews.summary}</p>
+                        <p className="text-sm text-gray-700">
+                            <strong>Team:</strong>{" "}
+                            {selectedNews.teamName ? selectedNews.teamName : "N/A"}
+                        </p>
+                        <p className="text-sm text-gray-700">
+                            <strong>Tournament:</strong>{" "}
+                            {selectedNews.tournamentName ? selectedNews.tournamentName : "N/A"}
+                        </p>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };
 
 export default NewsLetter;
-
 
 // import React, { useState } from "react";
 
