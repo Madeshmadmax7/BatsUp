@@ -4,15 +4,13 @@ import { Section, InlineSpinner, Empty } from "./SharedComponents";
 
 const API_BASE = "http://localhost:8080";
 
-export default function NewsletterManagement({
-    tournaments,
-    teams,
-    selectedTournament,
-    onTournamentSelect,
-    onError,
-}) {
+export default function NewsletterManagement({ onError }) {
+    const [tournaments, setTournaments] = useState([]);
+    const [selectedTournament, setSelectedTournament] = useState(null);
+    const [teams, setTeams] = useState([]);
     const [newsletterList, setNewsletterList] = useState([]);
     const [loadingNews, setLoadingNews] = useState(false);
+    const [loadingTournaments, setLoadingTournaments] = useState(false);
     const [newsletterForm, setNewsletterForm] = useState({
         subject: "",
         summary: "",
@@ -22,18 +20,57 @@ export default function NewsletterManagement({
         content: "",
     });
 
-    // Sync newsletterForm.tournamentId with selectedTournament.id
+    // Fetch all tournaments on mount
+    useEffect(() => {
+        const fetchTournaments = async () => {
+            setLoadingTournaments(true);
+            onError("");
+            try {
+                const res = await fetch(`${API_BASE}/api/tournaments/all`);
+                const data = await res.json();
+                setTournaments(Array.isArray(data) ? data : []);
+            } catch {
+                onError("Failed to load tournaments.");
+                setTournaments([]);
+            } finally {
+                setLoadingTournaments(false);
+            }
+        };
+        fetchTournaments();
+        refreshNewsletters();
+    }, []);
+
+    // Fetch teams whenever a tournament is selected
+    useEffect(() => {
+        if (!selectedTournament) {
+            setTeams([]);
+            return;
+        }
+
+        const fetchTeams = async () => {
+            try {
+                const res = await fetch(
+                    `${API_BASE}/api/tournaments/${selectedTournament.id}/teams`
+                );
+                const data = await res.json();
+                setTeams(Array.isArray(data) ? data : []);
+            } catch {
+                onError("Failed to load teams for selected tournament.");
+                setTeams([]);
+            }
+        };
+
+        fetchTeams();
+    }, [selectedTournament]);
+
+    // Sync form tournamentId with selectedTournament
     useEffect(() => {
         setNewsletterForm((f) => ({
             ...f,
             tournamentId: selectedTournament?.id || "",
-            teamId: "", // reset team selection when tournament changes
+            teamId: "",
         }));
     }, [selectedTournament]);
-
-    useEffect(() => {
-        refreshNewsletters();
-    }, []);
 
     const refreshNewsletters = async () => {
         setLoadingNews(true);
@@ -52,10 +89,9 @@ export default function NewsletterManagement({
 
     const handleFieldChange = (field, val) => {
         setNewsletterForm((p) => ({ ...p, [field]: val }));
-        // If tournamentId changes, notify parent for state update
         if (field === "tournamentId") {
             const t = tournaments.find((t) => t.id === Number(val));
-            onTournamentSelect(t || null);
+            setSelectedTournament(t || null);
         }
     };
 
@@ -72,12 +108,15 @@ export default function NewsletterManagement({
             }
             const payload = { ...newsletterForm, teamName };
             delete payload.teamId;
+
             const res = await fetch(`${API_BASE}/api/newsletter/create`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
+
             if (!res.ok) throw new Error("Create failed");
+
             setNewsletterForm({
                 subject: "",
                 summary: "",
@@ -108,7 +147,7 @@ export default function NewsletterManagement({
     return (
         <Section
             title="Newsletter Management"
-            right={loadingNews ? <InlineSpinner /> : null}
+            right={loadingNews || loadingTournaments ? <InlineSpinner /> : null}
         >
             <form
                 onSubmit={addNewsletter}
@@ -139,21 +178,17 @@ export default function NewsletterManagement({
                 />
                 <select
                     value={newsletterForm.tournamentId}
-                    onChange={(e) =>
-                        handleFieldChange(
-                            "tournamentId",
-                            e.target.value === "" ? "" : Number(e.target.value)
-                        )
-                    }
+                    onChange={(e) => handleFieldChange("tournamentId", e.target.value)}
                     className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
                 >
                     <option value="">Select Tournament (optional)</option>
                     {tournaments.map((t) => (
                         <option key={t.id} value={t.id}>
-                            {t.tournamentName || t.title || t.name}
+                            {t.name}
                         </option>
                     ))}
                 </select>
+
                 <select
                     value={newsletterForm.teamId}
                     onChange={(e) =>
@@ -163,7 +198,7 @@ export default function NewsletterManagement({
                         )
                     }
                     className="w-full bg-gray-800 px-3 py-2 rounded text-white border border-gray-700"
-                    disabled={!selectedTournament || teams.length === 0}
+                    disabled={!selectedTournament}
                 >
                     <option value="">Select Team (optional)</option>
                     {teams.map((team) => (
@@ -172,6 +207,7 @@ export default function NewsletterManagement({
                         </option>
                     ))}
                 </select>
+
                 <textarea
                     placeholder="Content *"
                     value={newsletterForm.content}
