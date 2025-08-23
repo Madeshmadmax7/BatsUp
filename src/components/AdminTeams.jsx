@@ -2,10 +2,10 @@ import React, { useState, useCallback } from "react";
 import TournamentManagement from "./TournamentManagement";
 import TeamManagement from "./TeamManagement";
 import ScoreManagement from "./ScoreManagement";
-import NewsletterManagement from "./NewsletterManagement";
 import FixtureRounds from "./FixtureRounds";
 import LeaderBoard from "./LeaderBoard";
 import { ErrorNote } from "./SharedComponents";
+import NewsletterManagement from "./NewsLetterManagement";
 
 export default function AdminPanel() {
     const [error, setError] = useState("");
