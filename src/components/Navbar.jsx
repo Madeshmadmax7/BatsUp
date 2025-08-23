@@ -24,31 +24,35 @@ const Navbar = () => {
         { name: "Tournaments", to: "/tournaments" },
         { name: "Fixtures", to: "/fixtures" },
         { name: "Scores", to: "/scores" },
+        { name: "Leaderboard", to: "/leaderboard" },
         { name: "Registered", to: "/registeredTournaments" },
         { name: "About", to: "/about" },
     ];
-
+    
     const navLinksForFan = [
         { name: "Home", to: "/" },
         { name: "Teams", to: "/teams" },
         { name: "Newsletter", to: "/newsletter" },
         { name: "Matches", to: "/matches" },
+        { name: "Leaderboard", to: "/leaderboard" },
         { name: "Scores", to: "/scores" },
         { name: "About", to: "/about" },
     ];
-
+    
     const navLinksForUser = [
         { name: "Home", to: "/" },
         { name: "Tournaments", to: "/tournaments" },
         { name: "Scores", to: "/scores" },
+        { name: "Leaderboard", to: "/leaderboard" },
         { name: "Newsletter", to: "/newsletter" },
         { name: "About", to: "/about" },
     ];
-
+    
     const navLinksForAdmin = [
         { name: "Home", to: "/" },
         { name: "Tournaments", to: "/tournaments" },
         { name: "Scores", to: "/scores" },
+        { name: "Leaderboard", to: "/leaderboard" },
         { name: "Fixtures", to: "/fixtures" },
         { name: "Newsletter", to: "/newsletter" },
         { name: "Manage", to: "/manage" },

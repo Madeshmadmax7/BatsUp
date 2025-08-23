@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 const API_BASE = "http://localhost:8080";
 
@@ -11,21 +11,20 @@ export default function LeaderBoard({ onError }) {
     const [loadingTeams, setLoadingTeams] = useState(false);
     const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [highlightedId, setHighlightedId] = useState(null);
 
-    // Fetch tournaments
     useEffect(() => {
         setLoadingTournaments(true);
-        fetch(`${API_BASE}/api/tournaments/get`)
-            .then((res) => {
+        fetch(`${API_BASE}/api/tournaments/all`)
+            .then(res => {
                 if (!res.ok) throw new Error("Failed to load tournaments");
                 return res.json();
             })
-            .then((data) => setTournaments(Array.isArray(data) ? data : []))
+            .then(data => setTournaments(Array.isArray(data) ? data : []))
             .catch(() => onError?.("Failed to load tournaments"))
             .finally(() => setLoadingTournaments(false));
     }, [onError]);
 
-    // Fetch teams of selected tournament
     useEffect(() => {
         if (!selectedTournament) {
             setTeams([]);
@@ -34,84 +33,102 @@ export default function LeaderBoard({ onError }) {
         }
         setLoadingTeams(true);
         fetch(`${API_BASE}/api/tournaments/${selectedTournament.id}/teams`)
-            .then((res) => {
+            .then(res => {
                 if (!res.ok) throw new Error("Failed to load teams");
                 return res.json();
             })
-            .then((data) => setTeams(Array.isArray(data) ? data : []))
+            .then(data => setTeams(Array.isArray(data) ? data : []))
             .catch(() => onError?.("Failed to load teams"))
             .finally(() => setLoadingTeams(false));
     }, [selectedTournament, onError]);
 
-    // Fetch leaderboard entries if teams exist
     useEffect(() => {
         if (!selectedTournament || teams.length === 0) {
             setLeaderboard([]);
-            setLoadingLeaderboard(false);
             return;
         }
         setLoadingLeaderboard(true);
         fetch(`${API_BASE}/api/leaderboard/tournament/${selectedTournament.id}`)
-            .then((res) => {
+            .then(res => {
                 if (!res.ok) throw new Error("Failed to load leaderboard");
                 return res.json();
             })
-            .then((data) => {
-                if (Array.isArray(data)) {
+            .then(data => {
+                if (Array.isArray(data) && data.length) {
                     const sorted = data.sort((a, b) => a.rank - b.rank);
-                    setLeaderboard(sorted);
+                    setLeaderboard(sorted.map(e => ({
+                        ...e,
+                        // Always default to string for input, to keep things controlled
+                        netRate: e.netRunRate !== undefined && e.netRunRate !== null ? e.netRunRate : "",
+                        matchesPlayed: e.matchesPlayed ?? "",
+                        matchesWon: e.matchesWon ?? "",
+                        matchesLost: e.matchesLost ?? "",
+                        points: e.points ?? ""
+                    })));
                 } else {
-                    setLeaderboard([]);
+                    // New leaderboard: fill from teams
+                    const initEntries = teams
+                        .slice()
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((team, idx) => ({
+                            id: null,
+                            tournamentId: selectedTournament.id,
+                            teamId: team.id,
+                            teamName: team.name,
+                            rank: idx + 1,
+                            matchesPlayed: "",
+                            matchesWon: "",
+                            matchesLost: "",
+                            points: "",
+                            netRate: "",
+                        }));
+                    setLeaderboard(initEntries);
                 }
             })
-            .catch(() => {
-                onError?.("Failed to load leaderboard");
-                setLeaderboard([]);
-            })
+            .catch(() => onError?.("Failed to load leaderboard"))
             .finally(() => setLoadingLeaderboard(false));
     }, [selectedTournament, teams, onError]);
 
-    // Update ranks after reorder
-    const updateRanks = (list) => list.map((entry, i) => ({ ...entry, rank: i + 1 }));
+    const updateRanks = list => list.map((item, idx) => ({ ...item, rank: idx + 1 }));
 
-    // Move entry up
-    const moveUp = (index) => {
-        if (index === 0) return;
-        setLeaderboard((prev) => {
-            const newList = [...prev];
-            [newList[index - 1], newList[index]] = [newList[index], newList[index - 1]];
-            return updateRanks(newList);
-        });
+    const moveUp = idx => {
+        if (idx === 0) return;
+        const newList = [...leaderboard];
+        [newList[idx], newList[idx - 1]] = [newList[idx - 1], newList[idx]];
+        const updatedList = updateRanks(newList);
+        setLeaderboard(updatedList);
+        setHighlightedId(updatedList[idx - 1].id);
+        setTimeout(() => setHighlightedId(null), 1200);
     };
 
-    // Move entry down
-    const moveDown = (index) => {
-        if (index === leaderboard.length - 1) return;
-        setLeaderboard((prev) => {
-            const newList = [...prev];
-            [newList[index], newList[index + 1]] = [newList[index + 1], newList[index]];
-            return updateRanks(newList);
-        });
+    const moveDown = idx => {
+        if (idx === leaderboard.length - 1) return;
+        const newList = [...leaderboard];
+        [newList[idx], newList[idx + 1]] = [newList[idx + 1], newList[idx]];
+        const updatedList = updateRanks(newList);
+        setLeaderboard(updatedList);
+        setHighlightedId(updatedList[idx + 1].id);
+        setTimeout(() => setHighlightedId(null), 1200);
     };
 
-    // Handle input field change
-    const handleInputChange = (id, field, val) => {
-        setLeaderboard((lb) =>
-            lb.map((entry) =>
-                entry.id === id
+    const handleChange = (id, field, value) => {
+        setLeaderboard(lb =>
+            lb.map(entry =>
+                entry.id === id || (entry.id === null && id === null)
                     ? {
                         ...entry,
                         [field]:
-                            field === "netRunRate"
-                                ? parseFloat(val) || 0
-                                : parseInt(val) || 0,
+                            value === "" ? "" :
+                                field === "netRate" ? value : // keep as string for input, parse before sending
+                                    value
                     }
                     : entry
             )
         );
     };
 
-    // Save leaderboard entries
+    const safeInputValue = v => v === undefined || v === null ? "" : v;
+
     const handleSave = async () => {
         setSaving(true);
         try {
@@ -119,7 +136,16 @@ export default function LeaderBoard({ onError }) {
                 await fetch(`${API_BASE}/api/leaderboard/entry`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(entry),
+                    body: JSON.stringify({
+                        ...entry,
+                        // Backend expects netRunRate! Convert the controlled input here:
+                        netRunRate: entry.netRate === "" ? 0 : parseFloat(entry.netRate),
+                        netRate: undefined, // don't send extraneous key
+                        matchesPlayed: entry.matchesPlayed === "" ? 0 : parseInt(entry.matchesPlayed),
+                        matchesWon: entry.matchesWon === "" ? 0 : parseInt(entry.matchesWon),
+                        matchesLost: entry.matchesLost === "" ? 0 : parseInt(entry.matchesLost),
+                        points: entry.points === "" ? 0 : parseInt(entry.points)
+                    }),
                 });
             }
             alert("Leaderboard updated successfully");
@@ -130,26 +156,26 @@ export default function LeaderBoard({ onError }) {
     };
 
     return (
-        <div className="p-6 max-w-7xl mx-auto bg-black min-h-screen text-white space-y-8">
-            <h2 className="text-3xl font-bold mb-6">Select Tournament</h2>
+        <div className="p-6 bg-black min-h-screen text-white max-w-5xl mx-auto">
+            <h1 className="text-3xl mb-6 font-bold">Select Tournament</h1>
 
             {loadingTournaments ? (
                 <p>Loading tournaments...</p>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {tournaments.map((t) => (
-                        <div
+                <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {tournaments.map(t => (
+                        <button
                             key={t.id}
                             onClick={() => setSelectedTournament(t)}
-                            className={`cursor-pointer p-4 border rounded-lg ${selectedTournament?.id === t.id ? "border-yellow-400 bg-gray-800" : "border-gray-900"
-                                } hover:border-yellow-400`}
+                            className={`p-4 rounded border ${selectedTournament?.id === t.id ? "border-yellow-400 bg-gray-800" : "border-gray-900"
+                                } hover:border-yellow-400 transition`}
                         >
-                            <h3 className="text-lg font-semibold">{t.name || t.tournamentName}</h3>
+                            <h2 className="font-semibold text-lg">{t.name}</h2>
                             <p className="text-sm text-gray-400">{t.location || "N/A"}</p>
-                            <p className="text-sm text-gray-400">
-                                Start: {new Date(t.startDate).toLocaleDateString()}
+                            <p className="text-sm text-gray-500">
+                                {new Date(t.startDate).toLocaleDateString()}
                             </p>
-                        </div>
+                        </button>
                     ))}
                 </div>
             )}
@@ -159,134 +185,124 @@ export default function LeaderBoard({ onError }) {
                     {loadingTeams ? (
                         <p>Loading teams...</p>
                     ) : teams.length === 0 ? (
-                        <p className="mt-4 text-gray-400">No teams registered for this tournament.</p>
+                        <p className="text-gray-400">No teams registered.</p>
                     ) : loadingLeaderboard ? (
                         <p>Loading leaderboard...</p>
-                    ) : leaderboard.length === 0 ? (
-                        <>
-                            <h2 className="mt-6 mb-4 text-yellow-400 text-2xl font-semibold">
-                                Teams registered (leaderboard not started)
-                            </h2>
-                            <ul className="bg-white text-black rounded-md shadow divide-y dividing-gray-300">
-                                {teams.map((team) => (
-                                    <li key={team.id} className="p-4">
-                                        {team.name || team.teamName}
-                                    </li>
-                                ))}
-                            </ul>
-                        </>
                     ) : (
                         <>
-                            <h2 className="mt-6 mb-4 text-yellow-400 text-2xl font-semibold">Leaderboard</h2>
-                            <table className="w-full border-collapse bg-white text-black rounded-md">
+                            <h2 className="text-yellow-400 font-semibold text-2xl mb-4">Leaderboard</h2>
+                            <table className="w-full border-collapse bg-gray-900 rounded-md">
                                 <thead>
-                                    <tr className="border-b border-gray-400">
-                                        <th className="p-2 w-10 text-left">Rank</th>
-                                        <th className="p-2 w-48 text-left">Team</th>
-                                        <th className="p-2 w-16">Up</th>
-                                        <th className="p-2 w-16">Down</th>
-                                        <th className="p-2 w-20">Played</th>
-                                        <th className="p-2 w-20">Won</th>
-                                        <th className="p-2 w-20">Lost</th>
-                                        <th className="p-2 w-20">Points</th>
-                                        <th className="p-2 w-24">Net Rate</th>
+                                    <tr className="border-b border-gray-700 text-white">
+                                        <th className="p-2 text-left w-12">Rank</th>
+                                        <th className="p-2 text-left w-48">Team</th>
+                                        <th className="p-2 text-left w-14">Played</th>
+                                        <th className="p-2 text-left w-14">Won</th>
+                                        <th className="p-2 text-left w-14">Lost</th>
+                                        <th className="p-2 text-left w-14">Points</th>
+                                        <th className="p-2 text-left w-20">Net Rate</th>
+                                        <th className="p-2 text-center w-24">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {leaderboard.map((entry, idx) => (
-                                        <tr key={entry.id} className="border-b border-gray-300">
+                                        <tr
+                                            key={entry.id ?? `temp-${entry.teamId}`}
+                                            className={`border-b border-gray-700 transition-colors ${highlightedId === entry.id ? "bg-yellow-700" : ""
+                                                }`}
+                                        >
                                             <td className="p-2">{entry.rank}</td>
                                             <td className="p-2 font-semibold">{entry.teamName}</td>
                                             <td className="p-2">
-                                                <button
-                                                    disabled={idx === 0}
-                                                    onClick={() => moveUp(idx)}
-                                                    className={`px-2 py-1 rounded ${idx === 0
-                                                            ? "opacity-50 cursor-not-allowed"
-                                                            : "bg-gray-300 hover:bg-gray-400 text-black"
-                                                        }`}
-                                                >
-                                                    ↑
-                                                </button>
-                                            </td>
-                                            <td className="p-2">
-                                                <button
-                                                    disabled={idx === leaderboard.length - 1}
-                                                    onClick={() => moveDown(idx)}
-                                                    className={`px-2 py-1 rounded ${idx === leaderboard.length - 1
-                                                            ? "opacity-50 cursor-not-allowed"
-                                                            : "bg-gray-300 hover:bg-gray-400 text-black"
-                                                        }`}
-                                                >
-                                                    ↓
-                                                </button>
-                                            </td>
-                                            <td className="p-2">
                                                 <input
                                                     type="number"
-                                                    min="0"
-                                                    value={entry.matchesPlayed}
-                                                    onChange={(e) =>
-                                                        handleInputChange(entry.id, "matchesPlayed", e.target.value)
+                                                    min={0}
+                                                    className="w-full rounded px-1 py-1 text-white"
+                                                    value={safeInputValue(entry.matchesPlayed)}
+                                                    onChange={e =>
+                                                        handleChange(entry.id, "matchesPlayed", e.target.value)
                                                     }
-                                                    className="w-full border rounded px-1 py-1"
                                                 />
                                             </td>
                                             <td className="p-2">
                                                 <input
                                                     type="number"
-                                                    min="0"
-                                                    value={entry.matchesWon}
-                                                    onChange={(e) =>
-                                                        handleInputChange(entry.id, "matchesWon", e.target.value)
+                                                    min={0}
+                                                    className="w-full rounded px-1 py-1 text-white"
+                                                    value={safeInputValue(entry.matchesWon)}
+                                                    onChange={e =>
+                                                        handleChange(entry.id, "matchesWon", e.target.value)
                                                     }
-                                                    className="w-full border rounded px-1 py-1"
                                                 />
                                             </td>
                                             <td className="p-2">
                                                 <input
                                                     type="number"
-                                                    min="0"
-                                                    value={entry.matchesLost}
-                                                    onChange={(e) =>
-                                                        handleInputChange(entry.id, "matchesLost", e.target.value)
+                                                    min={0}
+                                                    className="w-full rounded px-1 py-1 text-white"
+                                                    value={safeInputValue(entry.matchesLost)}
+                                                    onChange={e =>
+                                                        handleChange(entry.id, "matchesLost", e.target.value)
                                                     }
-                                                    className="w-full border rounded px-1 py-1"
                                                 />
                                             </td>
                                             <td className="p-2">
                                                 <input
                                                     type="number"
-                                                    min="0"
-                                                    value={entry.points}
-                                                    onChange={(e) =>
-                                                        handleInputChange(entry.id, "points", e.target.value)
+                                                    min={0}
+                                                    className="w-full rounded px-1 py-1 text-white"
+                                                    value={safeInputValue(entry.points)}
+                                                    onChange={e =>
+                                                        handleChange(entry.id, "points", e.target.value)
                                                     }
-                                                    className="w-full border rounded px-1 py-1"
                                                 />
                                             </td>
                                             <td className="p-2">
                                                 <input
                                                     type="number"
                                                     step="0.01"
-                                                    value={entry.netRate}
-                                                    onChange={(e) =>
-                                                        handleInputChange(entry.id, "netRate", e.target.value)
+                                                    className="w-full rounded px-1 py-1 text-white"
+                                                    value={safeInputValue(entry.netRate)}
+                                                    onChange={e =>
+                                                        handleChange(entry.id, "netRate", e.target.value)
                                                     }
-                                                    className="w-full border rounded px-1 py-1"
                                                 />
+                                            </td>
+                                            <td className="p-2 flex flex-col gap-1 items-center justify-center">
+                                                <button
+                                                    onClick={() => moveUp(idx)}
+                                                    disabled={idx === 0}
+                                                    className={`w-10 h-8 rounded-full ${idx === 0
+                                                            ? "opacity-50 cursor-not-allowed"
+                                                            : "bg-yellow-400 hover:bg-yellow-500 text-black"
+                                                        }`}
+                                                    title="Move Up"
+                                                >
+                                                    ↑
+                                                </button>
+                                                <button
+                                                    onClick={() => moveDown(idx)}
+                                                    disabled={idx === leaderboard.length - 1}
+                                                    className={`w-10 h-8 rounded-full ${idx === leaderboard.length - 1
+                                                            ? "opacity-50 cursor-not-allowed"
+                                                            : "bg-yellow-400 hover:bg-yellow-500 text-black"
+                                                        }`}
+                                                    title="Move Down"
+                                                >
+                                                    ↓
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
-                            <div className="flex justify-end mt-4">
+                            <div className="mt-6 flex justify-end">
                                 <button
                                     onClick={handleSave}
                                     disabled={saving}
-                                    className="bg-yellow-400 px-6 py-2 rounded text-black font-semibold hover:bg-yellow-500 disabled:opacity-50"
+                                    className="bg-yellow-400 hover:bg-yellow-500 text-black px-6 py-2 rounded disabled:opacity-50"
                                 >
-                                    {saving ? "Saving..." : "Update Leaderboard"}
+                                    {saving ? "Saving..." : "Update"}
                                 </button>
                             </div>
                         </>

@@ -1,598 +1,403 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
-
+import Img from "../assets/logo-black.png";
 
 const LoginRegister = () => {
-  const [isRegister, setIsRegister] = useState(false);
-  const [role, setSelectedRole] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+    const [isRegister, setIsRegister] = useState(false);
+    const [role, setSelectedRole] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
 
+    const [errors, setErrors] = useState({ email: "", password: "" });
 
-  const { user, setUser } = useAuth();
-  const navigate = useNavigate();
+    const { setUser } = useAuth();
+    const navigate = useNavigate();
 
+    // Player fields
+    const [playerData, setPlayerData] = useState({
+        playerName: "",
+        playerCity: "",
+        phone: "",
+        playerType: "",
+        teamName: "",
+        teamPassword: "",
+    });
 
-  // Player fields
-  const [playerData, setPlayerData] = useState({
-    playerName: "",
-    playerCity: "",
-    phone: "",
-    playerType: "",
-    teamName: "",
-    teamPassword: "",
-  });
+    // Fan fields
+    const [fanData, setFanData] = useState({
+        favoritePlayer: "",
+        region: "",
+    });
 
+    // --- Validation Helpers ---
+    const validateEmail = (value) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(value);
+    };
 
-  // Fan fields
-  const [fanData, setFanData] = useState({
-    favoritePlayer: "",
-    region: "",
-  });
+    const validatePassword = (value) => {
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
+        return passwordRegex.test(value);
+    };
 
+    const validateForm = () => {
+        let valid = true;
+        let newErrors = { email: "", password: "" };
 
-  const registerPlayer = async (userId) => {
-    const response = await fetch(`http://localhost:8080/api/player/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId,
-        nickname: playerData.playerName,
-        city: playerData.playerCity,
-        phone: playerData.phone,
-        playerType: playerData.playerType,
-        teamName: playerData.teamName,
-        teamPassword: playerData.teamPassword,
-      }),
-    });
-    if (!response.ok) throw new Error("Player registration failed");
-    return await response.json();
-  };
+        if (!validateEmail(email)) {
+            newErrors.email = "Invalid email format";
+            valid = false;
+        }
+        if (!validatePassword(password)) {
+            newErrors.password =
+                "Password must be at least 6 characters and contain letters & numbers";
+            valid = false;
+        }
 
+        setErrors(newErrors);
+        return valid;
+    };
 
-  const registerFan = async (userId) => {
-    const response = await fetch(
-      `http://localhost:8080/api/fan/create?userId=${userId}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          favoritePlayer: fanData.favoritePlayer,
-          region: fanData.region,
-        }),
-      }
-    );
-    if (!response.ok) throw new Error("Fan registration failed");
-    return await response.json();
-  };
+    // --- API Helpers ---
+    const registerPlayer = async (userId) => {
+        const response = await fetch(`http://localhost:8080/api/player/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                userId,
+                nickname: playerData.playerName,
+                city: playerData.playerCity,
+                phone: playerData.phone,
+                playerType: playerData.playerType,
+                teamName: playerData.teamName,
+                teamPassword: playerData.teamPassword,
+            }),
+        });
+        if (!response.ok) throw new Error("Player registration failed");
+        return await response.json();
+    };
 
+    const registerFan = async (userId) => {
+        const response = await fetch(
+            `http://localhost:8080/api/fan/create?userId=${userId}`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    favoritePlayer: fanData.favoritePlayer,
+                    region: fanData.region,
+                }),
+            }
+        );
+        if (!response.ok) throw new Error("Fan registration failed");
+        return await response.json();
+    };
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    try {
-      const userResponse = await fetch("http://localhost:8080/api/user/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          password,
-          firstName: role === "PLAYER" ? playerData.playerName : fanData.favoritePlayer,
-          lastName: "",
-          roles: [role],
-        }),
-      });
+    const handleRegister = async (e) => {
+        e.preventDefault();
+        if (!validateForm()) return;
 
+        try {
+            const userResponse = await fetch("http://localhost:8080/api/user/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    firstName: role === "PLAYER" ? playerData.playerName : fanData.favoritePlayer,
+                    lastName: "",
+                    roles: [role],
+                }),
+            });
 
-      if (!userResponse.ok) {
-        const errText = await userResponse.text();
-        throw new Error("User registration failed: " + errText);
-      }
-      const userJson = await userResponse.json();
+            if (!userResponse.ok) {
+                const errText = await userResponse.text();
+                throw new Error("User registration failed: " + errText);
+            }
+            const userJson = await userResponse.json();
 
+            if (role === "PLAYER") await registerPlayer(userJson.id);
+            if (role === "FAN") await registerFan(userJson.id);
 
-      if (role === "PLAYER") {
-        await registerPlayer(userJson.id);
-      } else if (role === "FAN") {
-        await registerFan(userJson.id);
-      }
+            alert("Registration successful!");
+            setIsRegister(false);
+        } catch (err) {
+            alert("Registration failed: " + err.message);
+        }
+    };
 
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        if (!validateForm()) return;
 
-      alert("Registration successful!");
-      setIsRegister(false);
-    } catch (err) {
-      alert("Registration failed: " + err.message);
-    }
-  };
+        try {
+            const response = await fetch("http://localhost:8080/api/user/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+            });
 
+            if (!response.ok) throw new Error("Login failed");
+            const userJson = await response.json();
+            const userRole = userJson.roles?.[0] || "USER";
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch("http://localhost:8080/api/user/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+            setUser((prev) => ({ ...prev, id: userJson.id, role: userRole }));
 
+            if (userRole === "PLAYER") {
+                const playerRes = await fetch(
+                    `http://localhost:8080/api/player/by-user/${userJson.id}`
+                );
+                if (playerRes.ok) {
+                    const player = await playerRes.json();
+                    setUser((prev) => ({ ...prev, playerId: player.id }));
+                }
+            }
 
-      if (!response.ok) throw new Error("Login failed");
-      const userJson = await response.json();
+            if (userRole === "FAN") {
+                const fanRes = await fetch(
+                    `http://localhost:8080/api/fan/by-user/${userJson.id}`
+                );
+                if (fanRes.ok) {
+                    const fan = await fanRes.json();
+                    setUser((prev) => ({ ...prev, fanId: fan.id }));
+                }
+            }
 
+            if (userRole === "ADMIN") navigate("/admin/tournament-list");
+            else navigate("/newsletter");
+        } catch (err) {
+            alert("Login failed: " + err.message);
+        }
+    };
 
-      const userRole = userJson.roles?.[0] || "USER";
+    return (
+        <div className="flex min-h-screen bg-[#FFF7E9] overflow-hidden">
+            {/* Left Panel */}
+            <div className="hidden md:flex w-1/2 bg-[#FFF7E9] items-center justify-center p-8">
+                <div className="text-center">
+                    <img src={Img} alt="BatsUp" className="w-64 mx-auto" />
+                    <h2 className="text-xl font-bold text-[#7B1E7A] mt-4">
+                        Turn your cricket ideas into reality.
+                    </h2>
+                    <p className="text-black mt-2 text-sm">
+                        Start for free and get attractive offers from the community
+                    </p>
+                </div>
+            </div>
 
+            {/* Right Panel */}
+            <div className="flex flex-col justify-center items-center bg-white p-6 shadow-lg w-full md:w-1/2">
+                <div className="w-full max-w-sm">
+                    {/* Header */}
+                    <div className="mb-6">
+                        <h2 className="text-xl font-bold text-[#7B1E7A] mb-1">
+                            {isRegister ? "Create Your Account" : "Login to your Account"}
+                        </h2>
+                        <p className="text-xs text-black">
+                            {isRegister
+                                ? "Join the cricket community today"
+                                : "See what’s going on with your cricket team"}
+                        </p>
+                    </div>
 
-      setUser((prev) => ({ ...prev, id: userJson.id, role: userRole }));
+                    {/* Toggle */}
+                    <div className="flex justify-center gap-3 mb-6">
+                        <button
+                            onClick={() => setIsRegister(false)}
+                            className={`px-5 py-2 rounded-lg text-sm font-medium ${!isRegister
+                                    ? "bg-[#7B1E7A] text-white shadow"
+                                    : "bg-gray-100 text-gray-600"
+                                }`}
+                        >
+                            Login
+                        </button>
+                        <button
+                            onClick={() => setIsRegister(true)}
+                            className={`px-5 py-2 rounded-lg text-sm font-medium ${isRegister
+                                    ? "bg-[#7B1E7A] text-white shadow"
+                                    : "bg-gray-100 text-gray-600"
+                                }`}
+                        >
+                            Register
+                        </button>
+                    </div>
 
+                    {/* Form */}
+                    <form
+                        onSubmit={isRegister ? handleRegister : handleLogin}
+                        className="space-y-3"
+                    >
+                        <div>
+                            <label className="block mb-1 text-xs text-black">Email</label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="Your email"
+                                className="w-full border text-black border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                required
+                            />
+                            {errors.email && (
+                                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                            )}
+                        </div>
 
-      if (userRole === "PLAYER") {
-        try {
-          const playerRes = await fetch(`http://localhost:8080/api/player/by-user/${userJson.id}`);
-          if (playerRes.ok) {
-            const player = await playerRes.json();
-            setUser((prev) => ({ ...prev, playerId: player.id }));
-          }
-        } catch (e) {
-          console.error("Failed to fetch player for user", e);
-        }
-      }
+                        <div>
+                            <label className="block mb-1 text-xs text-black">Password</label>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Your password"
+                                className="w-full border text-black border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                required
+                            />
+                            {errors.password && (
+                                <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+                            )}
+                        </div>
 
+                        {/* Role & Extra Fields */}
+                        {isRegister && (
+                            <>
+                                <div>
+                                    <label className="block mb-1 text-xs text-black">Role</label>
+                                    <select
+                                        value={role}
+                                        onChange={(e) => setSelectedRole(e.target.value)}
+                                        className="w-full border text-black border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                                        required
+                                    >
+                                        <option value="">-- Select Role --</option>
+                                        <option value="PLAYER">Player</option>
+                                        <option value="FAN">Fan</option>
+                                    </select>
+                                </div>
 
-      if (userRole === "FAN") {
-        try {
-          const fanRes = await fetch(`http://localhost:8080/api/fan/by-user/${userJson.id}`);
-          if (fanRes.ok) {
-            const fan = await fanRes.json();
-            setUser((prev) => ({ ...prev, fanId: fan.id }));
-          }
-        } catch { /* ignore */ }
-      }
+                                {role === "PLAYER" && (
+                                    <div className="space-y-2">
+                                        {[
+                                            { key: "playerName", label: "Player Name" },
+                                            { key: "playerCity", label: "City" },
+                                            { key: "phone", label: "Phone" },
+                                            { key: "playerType", label: "Player Type" },
+                                            { key: "teamName", label: "Team Name" },
+                                        ].map((field) => (
+                                            <div key={field.key}>
+                                                <label className="block mb-1 text-xs text-black">
+                                                    {field.label}
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    placeholder={field.label}
+                                                    value={playerData[field.key]}
+                                                    onChange={(e) =>
+                                                        setPlayerData({
+                                                            ...playerData,
+                                                            [field.key]: e.target.value,
+                                                        })
+                                                    }
+                                                    className="w-full border text-black border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                                />
+                                            </div>
+                                        ))}
+                                        <div>
+                                            <label className="block mb-1 text-xs text-black">
+                                                Team Password
+                                            </label>
+                                            <input
+                                                type="password"
+                                                placeholder="Team Password"
+                                                value={playerData.teamPassword}
+                                                onChange={(e) =>
+                                                    setPlayerData({
+                                                        ...playerData,
+                                                        teamPassword: e.target.value,
+                                                    })
+                                                }
+                                                className="w-full border text-black border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
 
+                                {role === "FAN" && (
+                                    <div className="space-y-2">
+                                        <div>
+                                            <label className="block mb-1 text-xs text-black">
+                                                Favorite Player
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="Favorite Player"
+                                                value={fanData.favoritePlayer}
+                                                onChange={(e) =>
+                                                    setFanData({
+                                                        ...fanData,
+                                                        favoritePlayer: e.target.value,
+                                                    })
+                                                }
+                                                className="w-full border text-black border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block mb-1 text-xs text-black">
+                                                Region
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="Region"
+                                                value={fanData.region}
+                                                onChange={(e) =>
+                                                    setFanData({ ...fanData, region: e.target.value })
+                                                }
+                                                className="w-full border text-black border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
 
-      if (userRole === "ADMIN") navigate("/admin/tournament-list");
-      else navigate("/newsletter"); // or your desired route
-    } catch (err) {
-      alert("Login failed: " + err.message);
-    }
-  };
+                        <button
+                            type="submit"
+                            className="w-full bg-[#7B1E7A] text-white rounded-lg py-2 hover:bg-[#5e145e] text-sm"
+                        >
+                            {isRegister ? "Register" : "Login"}
+                        </button>
+                    </form>
 
-
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white shadow-md rounded-lg w-full max-w-md p-6">
-        <h2 className="text-xl font-bold text-center text-black mb-4">
-          {isRegister ? "Register" : "Login"}
-        </h2>
-
-
-        <div className="flex justify-center gap-4 mb-6">
-          <button
-            onClick={() => setIsRegister(false)}
-            className={`px-4 py-2 rounded ${
-              !isRegister ? "bg-indigo-600 text-white" : "bg-gray-200 text-black"
-            }`}
-          >
-            Login
-          </button>
-          <button
-            onClick={() => setIsRegister(true)}
-            className={`px-4 py-2 rounded ${
-              isRegister ? "bg-indigo-600 text-white" : "bg-gray-200 text-black"
-            }`}
-          >
-            Register
-          </button>
-        </div>
-
-
-        <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-4 text-black">
-          <input
-          type="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder="Email"
-          required
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          placeholder="Password"
-          required
-        />
-        <button type="submit">{isRegister ? "Register" : "Login"}</button>
-
-
-          {isRegister && (
-            <>
-              <select
-                className="w-full p-2 border rounded text-black"
-                value={role}
-                onChange={(e) => setSelectedRole(e.target.value)}
-                required
-              >
-                <option value="">Select Role</option>
-                <option value="PLAYER">Player</option>
-                <option value="FAN">Fan</option>
-              </select>
-
-
-              {role === "PLAYER" && (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Player Name"
-                    className="w-full p-2 border rounded text-black"
-                    value={playerData.playerName}
-                    onChange={(e) =>
-                      setPlayerData({ ...playerData, playerName: e.target.value })
-                    }
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="City"
-                    className="w-full p-2 border rounded text-black"
-                    value={playerData.playerCity}
-                    onChange={(e) =>
-                      setPlayerData({ ...playerData, playerCity: e.target.value })
-                    }
-                  />
-                  <input
-                    type="text"
-                    placeholder="Phone"
-                    className="w-full p-2 border rounded text-black"
-                    value={playerData.phone}
-                    onChange={(e) =>
-                      setPlayerData({ ...playerData, phone: e.target.value })
-                    }
-                  />
-                  <input
-                    type="text"
-                    placeholder="Player Type"
-                    className="w-full p-2 border rounded text-black"
-                    value={playerData.playerType}
-                    onChange={(e) =>
-                      setPlayerData({
-                        ...playerData,
-                        playerType: e.target.value,
-                      })
-                    }
-                  />
-                  <input
-                    type="text"
-                    placeholder="Team Name"
-                    className="w-full p-2 border rounded text-black"
-                    value={playerData.teamName}
-                    onChange={(e) =>
-                      setPlayerData({ ...playerData, teamName: e.target.value })
-                    }
-                  />
-                  <input
-                    type="password"
-                    placeholder="Team Password"
-                    className="w-full p-2 border rounded text-black"
-                    value={playerData.teamPassword}
-                    onChange={(e) =>
-                      setPlayerData({
-                        ...playerData,
-                        teamPassword: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              )}
-
-
-              {role === "FAN" && (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Favorite Player"
-                    className="w-full p-2 border rounded text-black"
-                    value={fanData.favoritePlayer}
-                    onChange={(e) =>
-                      setFanData({
-                        ...fanData,
-                        favoritePlayer: e.target.value,
-                      })
-                    }
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="Region"
-                    className="w-full p-2 border rounded text-black"
-                    value={fanData.region}
-                    onChange={(e) =>
-                      setFanData({ ...fanData, region: e.target.value })
-                    }
-                  />
-                </div>
-              )}
-            </>
-          )}
-
-
-          <button
-            type="submit"
-            className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
-          >
-            {isRegister ? "Register" : "Login"}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+                    {/* Footer */}
+                    <p className="text-center text-xs text-black mt-4">
+                        {isRegister ? (
+                            <>
+                                Already have an account?{" "}
+                                <button
+                                    type="button"
+                                    onClick={() => setIsRegister(false)}
+                                    className="text-[#7B1E7A] hover:underline"
+                                >
+                                    Login
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                Not Registered Yet?{" "}
+                                <button
+                                    type="button"
+                                    onClick={() => setIsRegister(true)}
+                                    className="text-[#7B1E7A] hover:underline"
+                                >
+                                    Create an account
+                                </button>
+                            </>
+                        )}
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
 };
 
-
 export default LoginRegister;
-
-
-// import { useState, useEffect } from "react";
-// import { useNavigate } from "react-router-dom";
-// import Img from "../assets/logo-black.png";
-// import { useAuth } from '../AuthContext';
-
-// function PlayerDetailsForm({
-// playerName, setPlayerName,
-// playerCity, setPlayerCity,
-// phone, setPhone,
-// playedIn, setPlayedIn,
-// playerType, setPlayerType,
-// lastPlayedFor, setLastPlayedFor,
-// teamName, setTeamName,
-// teamPassword, setTeamPassword
-// }) {
-// return (
-//     <>
-//     <label className="block mb-1 text-xs text-black">Player Name</label>
-//     <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)}
-//         className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm" placeholder="Your full name" />
-
-//     <label className="block mb-1 text-xs text-black">Player City</label>
-//     <input type="text" value={playerCity} onChange={(e) => setPlayerCity(e.target.value)}
-//         className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm" placeholder="City" />
-
-//     <label className="block mb-1 text-xs text-black">Phone</label>
-//     <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)}
-//         className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm" placeholder="Phone number" />
-
-//     <label className="block mb-1 text-xs text-black">Played In</label>
-//     <input type="text" value={playedIn} onChange={(e) => setPlayedIn(e.target.value)}
-//         className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm" placeholder="Played in" />
-
-//     <label className="block mb-1 text-xs text-black">Player Type</label>
-//     <select value={playerType} onChange={(e) => setPlayerType(e.target.value)}
-//         className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm">
-//         <option value="">Select Type</option>
-//         <option value="Batsman">Batsman</option>
-//         <option value="Bowler">Bowler</option>
-//         <option value="All-Rounder">All-Rounder</option>
-//         <option value="Wicket Keeper">Wicket Keeper</option>
-//     </select>
-
-//     <label className="block mb-1 text-xs text-black">Last Played For</label>
-//     <input type="text" value={lastPlayedFor} onChange={(e) => setLastPlayedFor(e.target.value)}
-//         className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm" placeholder="Last played for" />
-
-//     <label className="block mb-1 text-xs text-black">Team Name</label>
-//     <input type="text" value={teamName} onChange={(e) => setTeamName(e.target.value)}
-//         className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm" placeholder="Team you want to join/register" />
-
-//     <label className="block mb-1 text-xs text-black">Team Password</label>
-//     <input type="password" value={teamPassword} onChange={(e) => setTeamPassword(e.target.value)}
-//         className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-4 text-sm" placeholder="Enter team password" />
-//     </>
-// );
-// }
-
-// function Login() {
-// const { setRole } = useAuth();
-
-// const [isRegister, setIsRegister] = useState(false);
-// const [role, setLocalRole] = useState("");
-// const [teamAction, setTeamAction] = useState("");
-// const [showPlayerDetails, setShowPlayerDetails] = useState(false);
-
-// // Player fields
-// const [playerName, setPlayerName] = useState("");
-// const [playerCity, setPlayerCity] = useState("");
-// const [phone, setPhone] = useState("");
-// const [playedIn, setPlayedIn] = useState("");
-// const [playerType, setPlayerType] = useState("");
-// const [lastPlayedFor, setLastPlayedFor] = useState("");
-// const [teamName, setTeamName] = useState("");
-// const [teamPassword, setTeamPassword] = useState("");
-
-// const navigate = useNavigate();
-
-// useEffect(() => {
-//     if (teamAction === "join") {
-//     setShowPlayerDetails(false);
-//     const t = setTimeout(() => setShowPlayerDetails(true), 360);
-//     return () => clearTimeout(t);
-//     } else {
-//     setShowPlayerDetails(false);
-//     }
-// }, [teamAction]);
-
-// const handleSubmit = (e) => {
-//     e.preventDefault();
-//     const data = {
-//     email: e.target.email?.value ?? "",
-//     password: e.target.password?.value ?? "",
-//     role: isRegister ? role : undefined,
-//     ...(role === "PLAYER" || teamAction === "join") && {
-//         playerName,
-//         playerCity,
-//         phone,
-//         playedIn,
-//         playerType,
-//         lastPlayedFor,
-//         teamName,
-//         teamPassword,
-//     }
-//     };
-//     console.log("Form data:", data);
-//     if (isRegister || (!isRegister && data.role)) {
-//     setRole(data.role || null);
-//     }
-//     alert(`${isRegister ? "Register" : teamAction === "join" ? "Join Team" : "Login"} submitted (UI only). See console.`);
-// };
-
-// const showLeftPanel = !(teamAction || isRegister);
-// const leftPanelWidth = showLeftPanel ? "w-1/2" : "hidden";
-// const rightPanelWidth = showLeftPanel ? "w-full md:w-1/2" : "w-full";
-
-// return (
-//     <div className="flex min-h-screen bg-[#FFF7E9] overflow-hidden transition-all duration-500 ease-in-out">
-//     {/* Left Panel */}
-//     <div className={`${leftPanelWidth} bg-[#FFF7E9] items-center justify-center p-8 hidden md:flex transition-all`}>
-//         <div className="text-center">
-//         <img src={Img} alt="BatsUp" className="w-64 mx-auto" />
-//         <h2 className="text-xl font-bold text-[#7B1E7A] mt-4">Turn your cricket ideas into reality.</h2>
-//         <p className="text-black mt-2 text-sm">Start for free and get attractive offers from the community</p>
-//         </div>
-//     </div>
-
-//     {/* Right Panel */}
-//     <div className={`flex flex-col justify-center items-center bg-white p-6 shadow-lg mt-[72px] md:mt-0 ${rightPanelWidth}`}>
-//         <div className={`w-full ${teamAction === "join" ? "max-w-4xl" : "max-w-xs"}`}>
-        
-//         {/* Header */}
-//         <div className="mb-2">
-//             <h2 className="text-xl font-bold text-[#7B1E7A] mb-1">
-//             {isRegister ? "Create Your Account" : "Login to your Account"}
-//             </h2>
-//             <p className="text-xs text-black mb-3">
-//             {isRegister ? "Join the cricket community today" : "See what’s going on with your cricket team"}
-//             </p>
-
-//             {/* Role specific buttons */}
-//             {isRegister && role === "PLAYER" && (
-//             <div className="flex gap-2 mb-3">
-//                 <button
-//                 type="button"
-//                 onClick={() => {
-//                     setTeamAction("register");
-//                     setTimeout(() => navigate("/tournaments"), 300);
-//                 }}
-//                 className={`flex-1 border rounded-lg py-1.5 text-sm ${teamAction === "register" ? "bg-[#7B1E7A] text-white" : "border-gray-300 text-black"}`}>
-//                 Register Tournament
-//                 </button>
-//                 <button
-//                 type="button"
-//                 onClick={() => setTeamAction("join")}
-//                 className={`flex-1 border rounded-lg py-1.5 text-sm ${teamAction === "join" ? "bg-[#7B1E7A] text-white" : "border-gray-300 text-black"}`}>
-//                 Join Team
-//                 </button>
-//             </div>
-//             )}
-//         </div>
-
-//         {/* Form */}
-//         <form onSubmit={handleSubmit}>
-//             {teamAction !== "join" && (
-//             <>
-//                 <label className="block mb-1 text-xs text-black">Email</label>
-//                 <input name="email" type="email" required
-//                 className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm" />
-//                 <label className="block mb-1 text-xs text-black">Password</label>
-//                 <input name="password" type="password" required
-//                 className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-4 text-sm" />
-
-//                 {isRegister && (
-//                 <>
-//                     <label className="block mb-1 text-xs text-black">Confirm Password</label>
-//                     <input type="password" required
-//                     className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm" />
-//                     <label className="block mb-1 text-xs text-black">Role</label>
-//                     <select value={role} onChange={(e) => { setLocalRole(e.target.value); setTeamAction(""); }}
-//                     className="w-full border text-black border-gray-300 rounded-lg px-3 py-2 text-sm bg-white mb-3">
-//                     <option value="">-- Select Role --</option>
-//                     <option value="PLAYER">Player</option>
-//                     <option value="FAN">Fan</option>
-//                     </select>
-//                     {role === "PLAYER" && (
-//                     <PlayerDetailsForm
-//                         playerName={playerName} setPlayerName={setPlayerName}
-//                         playerCity={playerCity} setPlayerCity={setPlayerCity}
-//                         phone={phone} setPhone={setPhone}
-//                         playedIn={playedIn} setPlayedIn={setPlayedIn}
-//                         playerType={playerType} setPlayerType={setPlayerType}
-//                         lastPlayedFor={lastPlayedFor} setLastPlayedFor={setLastPlayedFor}
-//                         teamName={teamName} setTeamName={setTeamName}
-//                         teamPassword={teamPassword} setTeamPassword={setTeamPassword}
-//                     />
-//                     )}
-//                 </>
-//                 )}
-//             </>
-//             )}
-
-//             {teamAction === "join" && (
-//             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                 <div>
-//                 <label className="block mb-1 text-xs text-black">Email</label>
-//                 <input name="email" type="email" required
-//                     className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm" />
-//                 <label className="block mb-1 text-xs text-black">Password</label>
-//                 <input name="password" type="password" required
-//                     className="w-full border text-black border-gray-300 rounded-lg px-2 py-1.5 mb-3 text-sm" />
-//                 <div className="flex items-center mb-3">
-//                     <input type="checkbox" id="remember" className="mr-2" />
-//                     <label htmlFor="remember" className="text-xs text-black">Remember Me</label>
-//                 </div>
-//                 </div>
-//                 {/* Right side player details */}
-//                 <div className={`${showPlayerDetails ? "opacity-100" : "opacity-0"} transition-opacity`}>
-//                 <PlayerDetailsForm
-//                     playerName={playerName} setPlayerName={setPlayerName}
-//                     playerCity={playerCity} setPlayerCity={setPlayerCity}
-//                     phone={phone} setPhone={setPhone}
-//                     playedIn={playedIn} setPlayedIn={setPlayedIn}
-//                     playerType={playerType} setPlayerType={setPlayerType}
-//                     lastPlayedFor={lastPlayedFor} setLastPlayedFor={setLastPlayedFor}
-//                     teamName={teamName} setTeamName={setTeamName}
-//                     teamPassword={teamPassword} setTeamPassword={setTeamPassword}
-//                 />
-//                 </div>
-//             </div>
-//             )}
-
-//             {teamAction !== "join" && (
-//             <div className="mt-4">
-//                 <button type="submit"
-//                 className="w-full bg-[#7B1E7A] text-white rounded-lg py-1.5 hover:bg-[#5e145e] text-sm">
-//                 {isRegister ? "Register" : "Login"}
-//                 </button>
-//             </div>
-//             )}
-//         </form>
-
-//         {/* Footer */}
-//         <p className="text-center text-xs text-black mt-4">
-//             {isRegister ? (
-//             <>
-//                 Already have an account?{" "}
-//                 <button type="button" onClick={() => { setIsRegister(false); setTeamAction(""); }}
-//                 className="text-[#7B1E7A] hover:underline">Login</button>
-//             </>
-//             ) : (
-//             <>
-//                 Not Registered Yet?{" "}
-//                 <button type="button" onClick={() => { setIsRegister(true); setTeamAction(""); }}
-//                 className="text-[#7B1E7A] hover:underline">Create an account</button>
-//             </>
-//             )}
-//         </p>
-//         </div>
-//     </div>
-//     </div>
-// );
-// }
-
-// export default Login;
