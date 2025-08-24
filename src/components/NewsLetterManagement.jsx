@@ -141,7 +141,7 @@ export default function NewsletterManagement({ onError }) {
     const resolveTournamentName = (id) => {
         if (!id) return "N/A";
         const t = tournaments.find((t) => Number(t.id) === Number(id));
-        return t ? t.name : "N/A";
+        return t ? t.tournamentName : "N/A";
     };
 
     const resolveTeamName = (id, tournamentId) => {
@@ -193,7 +193,7 @@ export default function NewsletterManagement({ onError }) {
                     <option value="">Select Tournament (optional)</option>
                     {tournaments.map((t) => (
                         <option key={t.id} value={t.id}>
-                            {t.name}
+                            {t.tournamentName}
                         </option>
                     ))}
                 </select>
