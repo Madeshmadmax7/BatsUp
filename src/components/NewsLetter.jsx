@@ -33,15 +33,15 @@ const NewsLetter = () => {
     const [selectedNews, setSelectedNews] = useState(null);
 
     useEffect(() => {
-        axios.get("http://localhost:8080/api/team/all")
+        axios.get("https://batsup-v1-oauz.onrender.com/api/team/all")
             .then((r) => setTeams(r.data))
             .catch(() => setTeams([]));
 
-        axios.get("http://localhost:8080/api/tournaments/get")
+        axios.get("https://batsup-v1-oauz.onrender.com/api/tournaments/get")
             .then((r) => setTournaments(r.data))
             .catch(() => setTournaments([]));
 
-        axios.get("http://localhost:8080/api/newsletter/all")
+        axios.get("https://batsup-v1-oauz.onrender.com/api/newsletter/all")
             .then((r) => setNewsData(r.data))
             .catch(() => setNewsData([]));
     }, []);
@@ -52,7 +52,7 @@ const NewsLetter = () => {
         if (!needs) return;
         (async () => {
             try {
-                const res = await fetch(`http://localhost:8080/api/fan/by-user/${user.id}`);
+                const res = await fetch(`https://batsup-v1-oauz.onrender.com/api/fan/by-user/${user.id}`);
                 if (res.ok) {
                     const data = await res.json();
                     setFan(data);
@@ -66,7 +66,7 @@ const NewsLetter = () => {
         if (role !== "FAN" || !fanId) return;
         (async () => {
             try {
-                const res = await fetch(`http://localhost:8080/api/fan/${fanId}`);
+                const res = await fetch(`https://batsup-v1-oauz.onrender.com/api/fan/${fanId}`);
                 if (res.ok) setFan(await res.json());
             } catch { }
         })();
@@ -95,7 +95,7 @@ const NewsLetter = () => {
         next.has(teamId) ? next.delete(teamId) : next.add(teamId);
         const body = Array.from(next);
         try {
-            const res = await fetch(`http://localhost:8080/api/fan/${fan.id}/follow-teams`, {
+            const res = await fetch(`https://batsup-v1-oauz.onrender.com/api/fan/${fan.id}/follow-teams`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
@@ -110,7 +110,7 @@ const NewsLetter = () => {
         next.has(tid) ? next.delete(tid) : next.add(tid);
         const body = Array.from(next);
         try {
-            const res = await fetch(`http://localhost:8080/api/fan/${fan.id}/follow-tournaments`, {
+            const res = await fetch(`https://batsup-v1-oauz.onrender.com/api/fan/${fan.id}/follow-tournaments`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),

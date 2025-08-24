@@ -1,4 +1,4 @@
-export const API_BASE = "http://localhost:8080"; // update if needed
+export const API_BASE = "https://batsup-v1-oauz.onrender.com";
 
 export function clsx(...parts) {
     return parts.filter(Boolean).join(" ");

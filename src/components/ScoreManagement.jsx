@@ -3,7 +3,7 @@ import { Trash2, Plus, X } from "lucide-react";
 import axios from "axios";
 import { Section } from "./SharedComponents";
 
-const API_BASE = "http://localhost:8080";
+const API_BASE = "https://batsup-v1-oauz.onrender.com";
 
 async function fetchWithError(url, description, options) {
     try {

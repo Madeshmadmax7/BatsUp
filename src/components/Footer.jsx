@@ -9,7 +9,7 @@ const Footer = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetch("http://localhost:8080/api/tournaments/get")
+        fetch("https://batsup-v1-oauz.onrender.com/api/tournaments/get")
             .then((res) => res.json())
             .then((data) => {
                 // Pick the first (if any) tournament for showcase.
@@ -17,7 +17,7 @@ const Footer = () => {
             })
             .catch(() => setTournament(null));
 
-        fetch("http://localhost:8080/api/newsletter/all")
+        fetch("https://batsup-v1-oauz.onrender.com/api/newsletter/all")
             .then((res) => res.json())
             .then((data) => {
                 // Pick one random newsletter for showcase.

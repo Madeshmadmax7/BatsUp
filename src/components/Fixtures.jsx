@@ -10,7 +10,7 @@ const Fixture = () => {
 
     useEffect(() => {
         setLoading(true);
-        axios.get("http://localhost:8080/api/tournaments/all")
+        axios.get("https://batsup-v1-oauz.onrender.com/api/tournaments/all")
             .then(res => {
                 setTournaments(Array.isArray(res.data) ? res.data : []);
                 setLoading(false);

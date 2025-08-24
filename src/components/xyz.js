@@ -58,7 +58,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Trash2, Plus, RefreshCw, AlertCircle, X } from "lucide-react";
 import axios from "axios";
 
-const API_BASE = "http://localhost:8080"; // update if needed
+const API_BASE = "https://batsup-v1-oauz.onrender.com";
 
 function clsx(...parts) {
     return parts.filter(Boolean).join(" ");

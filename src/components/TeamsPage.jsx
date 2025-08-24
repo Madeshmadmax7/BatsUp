@@ -16,7 +16,7 @@ const TeamsPage = () => {
 
     // Load all teams
     useEffect(() => {
-        fetch("http://localhost:8080/api/team/all")
+        fetch("https://batsup-v1-oauz.onrender.com/api/team/all")
             .then((res) => res.json())
             .then((data) => setTeams(data))
             .catch(() => setTeams([]));
@@ -32,7 +32,7 @@ const TeamsPage = () => {
         if (role !== "FAN" || user?.fanId) return;
         (async () => {
             try {
-                const res = await fetch(`http://localhost:8080/api/fan/by-user/${user.id}`);
+                const res = await fetch(`https://batsup-v1-oauz.onrender.com/api/fan/by-user/${user.id}`);
                 if (res.ok) {
                     const data = await res.json();
                     setFan(data);
@@ -47,7 +47,7 @@ const TeamsPage = () => {
         if (role !== "FAN" || !fanId) return;
         (async () => {
             try {
-                const res = await fetch(`http://localhost:8080/api/fan/${fanId}`);
+                const res = await fetch(`https://batsup-v1-oauz.onrender.com/api/fan/${fanId}`);
                 if (res.ok) setFan(await res.json());
             } catch { }
         })();
@@ -60,7 +60,7 @@ const TeamsPage = () => {
     const [allPlayers, setAllPlayers] = useState([]);
 
     useEffect(() => {
-        fetch("http://localhost:8080/api/player/all")
+        fetch("https://batsup-v1-oauz.onrender.com/api/player/all")
             .then((res) => res.json())
             .then((data) => setAllPlayers(data))
             .catch(() => setAllPlayers([]));
@@ -75,7 +75,7 @@ const TeamsPage = () => {
         const next = new Set(favTeamIds);
         next.has(teamId) ? next.delete(teamId) : next.add(teamId);
         try {
-            const res = await fetch(`http://localhost:8080/api/fan/${fan.id}/follow-teams`, {
+            const res = await fetch(`https://batsup-v1-oauz.onrender.com/api/fan/${fan.id}/follow-teams`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify([...next]),

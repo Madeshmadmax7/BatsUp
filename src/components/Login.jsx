@@ -61,7 +61,7 @@ const LoginRegister = () => {
 
     // --- API Helpers ---
     const registerPlayer = async (userId) => {
-        const response = await fetch(`http://localhost:8080/api/player/register`, {
+        const response = await fetch(`https://batsup-v1-oauz.onrender.com/api/player/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -80,7 +80,7 @@ const LoginRegister = () => {
 
     const registerFan = async (userId) => {
         const response = await fetch(
-            `http://localhost:8080/api/fan/create?userId=${userId}`,
+            `https://batsup-v1-oauz.onrender.com/api/fan/create?userId=${userId}`,
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -99,7 +99,7 @@ const LoginRegister = () => {
         if (!validateForm()) return;
 
         try {
-            const userResponse = await fetch("http://localhost:8080/api/user/register", {
+            const userResponse = await fetch("https://batsup-v1-oauz.onrender.com/api/user/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -132,7 +132,7 @@ const LoginRegister = () => {
         if (!validateForm()) return;
 
         try {
-            const response = await fetch("http://localhost:8080/api/user/login", {
+            const response = await fetch("https://batsup-v1-oauz.onrender.com/api/user/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
@@ -146,7 +146,7 @@ const LoginRegister = () => {
 
             if (userRole === "PLAYER") {
                 const playerRes = await fetch(
-                    `http://localhost:8080/api/player/by-user/${userJson.id}`
+                    `https://batsup-v1-oauz.onrender.com/api/player/by-user/${userJson.id}`
                 );
                 if (playerRes.ok) {
                     const player = await playerRes.json();
@@ -156,7 +156,7 @@ const LoginRegister = () => {
 
             if (userRole === "FAN") {
                 const fanRes = await fetch(
-                    `http://localhost:8080/api/fan/by-user/${userJson.id}`
+                    `https://batsup-v1-oauz.onrender.com/api/fan/by-user/${userJson.id}`
                 );
                 if (fanRes.ok) {
                     const fan = await fanRes.json();

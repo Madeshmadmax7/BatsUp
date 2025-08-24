@@ -8,7 +8,7 @@ const Tournament = () => {
   const [selectedTournament, setSelectedTournament] = useState(null);
 
   useEffect(() => {
-    axios.get("http://localhost:8080/api/tournaments/get")
+    axios.get("https://batsup-v1-oauz.onrender.com/api/tournaments/get")
       .then((res) => setTournaments(res.data))
       .catch(() => setTournaments([]));
   }, []);

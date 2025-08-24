@@ -26,14 +26,14 @@ const Form = ({ tournament, onClose, onRegister }) => {
             };
 
             const { data: createdTeam } = await axios.post(
-                "http://localhost:8080/api/team/create",
+                "https://batsup-v1-oauz.onrender.com/api/team/create",
                 teamCreatePayload
             );
 
             const teamId = createdTeam.id;
 
             await axios.post(
-                `http://localhost:8080/api/tournaments/${tournament.id}/add-team/${teamId}`
+                `https://batsup-v1-oauz.onrender.com/api/tournaments/${tournament.id}/add-team/${teamId}`
             );
 
             for (let i = 0; i < players.length; i++) {
@@ -51,7 +51,7 @@ const Form = ({ tournament, onClose, onRegister }) => {
                 };
 
                 await axios.post(
-                    "http://localhost:8080/api/player/createNoUser",
+                    "https://batsup-v1-oauz.onrender.com/api/player/createNoUser",
                     playerPayload
                 );
             }

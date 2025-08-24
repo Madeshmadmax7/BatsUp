@@ -6,7 +6,7 @@ const Registered = () => {
 
     useEffect(() => {
         axios
-            .get("http://localhost:8080/api/tournaments/get")
+            .get("https://batsup-v1-oauz.onrender.com/api/tournaments/get")
             .then((res) => setTournaments(res.data))
             .catch(() => setTournaments([]));
     }, []);

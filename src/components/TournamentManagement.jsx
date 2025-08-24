@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Section, InlineSpinner, Empty, clsx } from "./SharedComponents";
 import { Trash2 } from "lucide-react";
 
-const API_BASE = "http://localhost:8080";
+const API_BASE = "https://batsup-v1-oauz.onrender.com";
 
 export default function TournamentManagement({
     selectedTournament,

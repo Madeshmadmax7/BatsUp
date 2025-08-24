@@ -17,7 +17,7 @@ const RegisteredTournaments = () => {
         const fetchTournaments = async () => {
             try {
                 const res = await axios.get(
-                    `http://localhost:8080/api/player/${user.playerId}/tournaments`
+                    `https://batsup-v1-oauz.onrender.com/api/player/${user.playerId}/tournaments`
                 );
                 setTeamTournaments(res.data);
             } catch (err) {
@@ -51,7 +51,7 @@ const RegisteredTournaments = () => {
             <div className="relative">
                 {tournament.image ? (
                     <img
-                        src={`http://localhost:8080/images/tournaments/${tournament.image}`}
+                        src={`https://batsup-v1-oauz.onrender.com/images/tournaments/${tournament.image}`}
                         alt={tournament.tournamentName}
                         className="w-full h-60 object-cover"
                     />

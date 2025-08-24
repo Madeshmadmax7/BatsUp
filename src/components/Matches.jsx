@@ -9,7 +9,7 @@ const Matches = () => {
 
     // Load tournaments
     useEffect(() => {
-        axios.get("http://localhost:8080/api/tournaments/get")
+        axios.get("https://batsup-v1-oauz.onrender.com/api/tournaments/get")
             .then((response) => {
                 setTournaments(Array.isArray(response.data) ? response.data : []);
             })
@@ -23,7 +23,7 @@ const Matches = () => {
             return;
         }
 
-        axios.get(`http://localhost:8080/api/round/tournament/${selectedTournament.id}`)
+        axios.get(`https://batsup-v1-oauz.onrender.com/api/round/tournament/${selectedTournament.id}`)
             .then((res) => {
                 const rounds = res.data;
 

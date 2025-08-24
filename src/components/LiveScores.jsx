@@ -97,7 +97,7 @@ export default function LiveScores() {
 
     async function fetchMatches() {
         try {
-            const res = await axios.get("http://localhost:8080/api/matches/all");
+            const res = await axios.get("https://batsup-v1-oauz.onrender.com/api/matches/all");
             setMatches(res.data);
         } catch (e) {
             console.error("Failed to fetch matches", e);
@@ -111,7 +111,7 @@ export default function LiveScores() {
 
     async function fetchScorecardsForMatch(matchId) {
         try {
-            const res = await axios.get(`http://localhost:8080/api/scorecard/${matchId}`);
+            const res = await axios.get(`https://batsup-v1-oauz.onrender.com/api/scorecard/${matchId}`);
             setScorecards(res.data);
         } catch (e) {
             console.error("Failed to fetch scorecards", e);

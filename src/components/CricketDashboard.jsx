@@ -14,7 +14,7 @@ const CricketCards = () => {
     useEffect(() => {
         // Fetch news
         axios
-            .get("http://localhost:8080/api/newsletter/all")
+            .get("https://batsup-v1-oauz.onrender.com/api/newsletter/all")
             .then((res) => {
                 const data = res.data.map((item) => ({
                     type: item.type || "NEWS",
@@ -35,7 +35,7 @@ const CricketCards = () => {
 
         // Fetch match scores
         axios
-            .get("http://localhost:8080/api/scoredetails")
+            .get("https://batsup-v1-oauz.onrender.com/api/scoredetails")
             .then((res) => {
                 const data = res.data.map((match) => ({
                     stadium: match.stadium || "Unknown Stadium",
@@ -60,7 +60,7 @@ const CricketCards = () => {
 
         // Fetch team scorecards and group them
         axios
-            .get("http://localhost:8080/api/scorecard/all")
+            .get("https://batsup-v1-oauz.onrender.com/api/scorecard/all")
             .then((res) => {
                 const grouped = res.data.reduce((acc, curr) => {
                     const team = curr.teamName || "Unknown Team";
