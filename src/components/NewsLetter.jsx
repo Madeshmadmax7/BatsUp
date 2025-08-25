@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../AuthContext";
 
+
 function groupNews(news, favTeamIds = new Set(), favTournamentIds = new Set(), favTeamNames = new Set()) {
     const preferred = [];
     const others = [];
@@ -17,38 +18,44 @@ function groupNews(news, favTeamIds = new Set(), favTournamentIds = new Set(), f
     return { preferred, others };
 }
 
+
 const NewsLetter = () => {
     const { user, setUser } = useAuth();
     const role = user?.role;
+
 
     const [teams, setTeams] = useState([]);
     const [tournaments, setTournaments] = useState([]);
     const [newsData, setNewsData] = useState([]);
 
+
     const [fan, setFan] = useState(null);
     const fanId = user?.fanId ?? fan?.id ?? null;
+
 
     // Popup state
     const [popupOpen, setPopupOpen] = useState(false);
     const [selectedNews, setSelectedNews] = useState(null);
 
+
     useEffect(() => {
-        axios
-            .get("https://batsup-v1-oauz.onrender.com/api/team/all")
+        axios.get("https://batsup-v1-oauz.onrender.com/api/team/all")
             .then((r) => setTeams(r.data))
             .catch(() => setTeams([]));
 
-        axios
-            .get("https://batsup-v1-oauz.onrender.com/api/tournaments/get")
+
+        axios.get("https://batsup-v1-oauz.onrender.com/api/tournaments/get")
             .then((r) => setTournaments(r.data))
             .catch(() => setTournaments([]));
 
-        axios
-            .get("https://batsup-v1-oauz.onrender.com/api/newsletter/all")
+
+        axios.get("https://batsup-v1-oauz.onrender.com/api/newsletter/all")
             .then((r) => setNewsData(r.data))
             .catch(() => setNewsData([]));
     }, []);
 
+
+    // Resolve fan by userId if needed
     useEffect(() => {
         const needs = role === "FAN" && !user?.fanId && user?.id;
         if (!needs) return;
@@ -64,6 +71,7 @@ const NewsLetter = () => {
         })();
     }, [role, user?.id, user?.fanId, setUser]);
 
+
     useEffect(() => {
         if (role !== "FAN" || !fanId) return;
         (async () => {
@@ -73,6 +81,7 @@ const NewsLetter = () => {
             } catch { }
         })();
     }, [role, fanId]);
+
 
     const favTeamIds = useMemo(() => new Set(fan?.followedTeamIds || []), [fan]);
     const favTournamentIds = useMemo(() => new Set(fan?.followedTournamentIds || []), [fan]);
@@ -86,10 +95,12 @@ const NewsLetter = () => {
         return set;
     }, [teams, favTeamIds]);
 
+
     const { preferred, others } = useMemo(() => {
         if (role !== "FAN") return { preferred: [], others: newsData };
         return groupNews(newsData, favTeamIds, favTournamentIds, favTeamNames);
     }, [newsData, role, favTeamIds, favTournamentIds, favTeamNames]);
+
 
     const toggleTeam = async (teamId) => {
         if (!fan) return;
@@ -97,17 +108,15 @@ const NewsLetter = () => {
         next.has(teamId) ? next.delete(teamId) : next.add(teamId);
         const body = Array.from(next);
         try {
-            const res = await fetch(
-                `https://batsup-v1-oauz.onrender.com/api/fan/${fan.id}/follow-teams`,
-                {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(body),
-                }
-            );
+            const res = await fetch(`https://batsup-v1-oauz.onrender.com/api/fan/${fan.id}/follow-teams`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
             if (res.ok) setFan(await res.json());
         } catch { }
     };
+
 
     const toggleTournament = async (tid) => {
         if (!fan) return;
@@ -115,17 +124,15 @@ const NewsLetter = () => {
         next.has(tid) ? next.delete(tid) : next.add(tid);
         const body = Array.from(next);
         try {
-            const res = await fetch(
-                `https://batsup-v1-oauz.onrender.com/api/fan/${fan.id}/follow-tournaments`,
-                {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(body),
-                }
-            );
+            const res = await fetch(`https://batsup-v1-oauz.onrender.com/api/fan/${fan.id}/follow-tournaments`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
             if (res.ok) setFan(await res.json());
         } catch { }
     };
+
 
     const TeamChip = ({ t }) => {
         const isFav = favTeamIds.has(t.id);
@@ -150,6 +157,7 @@ const NewsLetter = () => {
             </button>
         );
     };
+
 
     const TournamentChip = ({ tr }) => {
         const isFav = favTournamentIds.has(tr.id);
@@ -177,15 +185,18 @@ const NewsLetter = () => {
         );
     };
 
+
     const handleCardClick = (item) => {
         setSelectedNews(item);
         setPopupOpen(true);
     };
 
+
     const closePopup = () => {
         setPopupOpen(false);
         setSelectedNews(null);
     };
+
 
     const Card = ({ item }) => (
         <article
@@ -212,76 +223,73 @@ const NewsLetter = () => {
         </article>
     );
 
+
     return (
         <div className="max-w-6xl mx-auto px-6 mt-24 text-white">
             <h1 className="text-4xl mb-6 border-b-2 border-gray-500">Cricket News & Scores</h1>
+
 
             {role === "FAN" && fan && (
                 <>
                     <section className="mb-10">
                         <h2 className="text-2xl font-semibold mb-3">Your Picks</h2>
 
+
                         <div className="mb-4">
                             <h3 className="text-lg mb-2 opacity-80">Teams</h3>
                             <div className="flex flex-wrap gap-3">
-                                {teams.length ? (
-                                    teams.map((t) => <TeamChip key={t.id} t={t} />)
-                                ) : (
+                                {teams.length ? teams.map((t) => <TeamChip key={t.id} t={t} />) : (
                                     <span className="text-gray-400">No teams</span>
                                 )}
                             </div>
                         </div>
 
+
                         <div>
                             <h3 className="text-lg mb-2 opacity-80">Tournaments</h3>
                             <div className="flex flex-wrap gap-3">
-                                {tournaments.length ? (
-                                    tournaments.map((tr) => <TournamentChip key={tr.id} tr={tr} />)
-                                ) : (
+                                {tournaments.length ? tournaments.map((tr) => <TournamentChip key={tr.id} tr={tr} />) : (
                                     <span className="text-gray-400">No tournaments</span>
                                 )}
                             </div>
                         </div>
                     </section>
 
+
                     <section className="mb-12">
                         <h2 className="text-2xl font-semibold mb-4">Top for You</h2>
                         {preferred.length === 0 ? (
-                            <p className="text-gray-400">
-                                No personalized news yet. Pick some favorites above.
-                            </p>
+                            <p className="text-gray-400">No personalized news yet. Pick some favorites above.</p>
                         ) : (
                             <div className="grid md:grid-cols-3 gap-8">
-                                {preferred.map((item) => (
-                                    <Card key={item.id} item={item} />
-                                ))}
+                                {preferred.map((item) => <Card key={item.id} item={item} />)}
                             </div>
                         )}
                     </section>
                 </>
             )}
 
+
             <section>
-                <h2 className="text-2xl font-semibold mb-4">
-                    {role === "FAN" ? "More News" : "All News"}
-                </h2>
+                <h2 className="text-2xl font-semibold mb-4">{role === "FAN" ? "More News" : "All News"}</h2>
                 <div className="grid md:grid-cols-3 gap-8">
-                    {(role === "FAN" ? others : newsData).map((item) => (
-                        <Card key={item.id} item={item} />
-                    ))}
+                    {(role === "FAN" ? others : newsData).map((item) => <Card key={item.id} item={item} />)}
                 </div>
             </section>
 
+
+            {/* Popup */}
             {/* Popup */}
             {popupOpen && selectedNews && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white text-black rounded-xl shadow-xl p-6 max-w-md w-full relative max-h-[90vh] overflow-y-auto">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white text-black rounded-xl shadow-xl p-6 max-w-md w-full relative">
                         <button
                             onClick={closePopup}
                             className="absolute top-2 right-2 text-gray-600 hover:text-black"
                         >
                             ✖
                         </button>
+
 
                         {/* Image Container */}
                         <div className="w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
@@ -296,6 +304,7 @@ const NewsLetter = () => {
                             )}
                         </div>
 
+
                         <h2 className="text-2xl font-bold mb-4">{selectedNews.subject}</h2>
                         <p className="mb-2">{selectedNews.summary}</p>
                         <p className="text-sm text-gray-700">
@@ -309,8 +318,11 @@ const NewsLetter = () => {
                     </div>
                 </div>
             )}
+
+
         </div>
     );
 };
+
 
 export default NewsLetter;
