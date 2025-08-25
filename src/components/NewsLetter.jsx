@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../AuthContext";
 
-
 function groupNews(news, favTeamIds = new Set(), favTournamentIds = new Set(), favTeamNames = new Set()) {
     const preferred = [];
     const others = [];
@@ -18,44 +17,34 @@ function groupNews(news, favTeamIds = new Set(), favTournamentIds = new Set(), f
     return { preferred, others };
 }
 
-
 const NewsLetter = () => {
     const { user, setUser } = useAuth();
     const role = user?.role;
-
 
     const [teams, setTeams] = useState([]);
     const [tournaments, setTournaments] = useState([]);
     const [newsData, setNewsData] = useState([]);
 
-
     const [fan, setFan] = useState(null);
     const fanId = user?.fanId ?? fan?.id ?? null;
 
-
-    // Popup state
     const [popupOpen, setPopupOpen] = useState(false);
     const [selectedNews, setSelectedNews] = useState(null);
-
 
     useEffect(() => {
         axios.get("https://batsup-v1-oauz.onrender.com/api/team/all")
             .then((r) => setTeams(r.data))
             .catch(() => setTeams([]));
 
-
         axios.get("https://batsup-v1-oauz.onrender.com/api/tournaments/get")
             .then((r) => setTournaments(r.data))
             .catch(() => setTournaments([]));
-
 
         axios.get("https://batsup-v1-oauz.onrender.com/api/newsletter/all")
             .then((r) => setNewsData(r.data))
             .catch(() => setNewsData([]));
     }, []);
 
-
-    // Resolve fan by userId if needed
     useEffect(() => {
         const needs = role === "FAN" && !user?.fanId && user?.id;
         if (!needs) return;
@@ -71,7 +60,6 @@ const NewsLetter = () => {
         })();
     }, [role, user?.id, user?.fanId, setUser]);
 
-
     useEffect(() => {
         if (role !== "FAN" || !fanId) return;
         (async () => {
@@ -81,7 +69,6 @@ const NewsLetter = () => {
             } catch { }
         })();
     }, [role, fanId]);
-
 
     const favTeamIds = useMemo(() => new Set(fan?.followedTeamIds || []), [fan]);
     const favTournamentIds = useMemo(() => new Set(fan?.followedTournamentIds || []), [fan]);
@@ -95,12 +82,10 @@ const NewsLetter = () => {
         return set;
     }, [teams, favTeamIds]);
 
-
     const { preferred, others } = useMemo(() => {
         if (role !== "FAN") return { preferred: [], others: newsData };
         return groupNews(newsData, favTeamIds, favTournamentIds, favTeamNames);
     }, [newsData, role, favTeamIds, favTournamentIds, favTeamNames]);
-
 
     const toggleTeam = async (teamId) => {
         if (!fan) return;
@@ -117,7 +102,6 @@ const NewsLetter = () => {
         } catch { }
     };
 
-
     const toggleTournament = async (tid) => {
         if (!fan) return;
         const next = new Set(favTournamentIds);
@@ -133,70 +117,54 @@ const NewsLetter = () => {
         } catch { }
     };
 
+    // Rounded Circle Card
+    const RoundChip = ({ isFav, image, name, onClick }) => (
+        <button
+            onClick={onClick}
+            className={`flex flex-col items-center gap-2 border rounded-full p-4 w-28 h-36 transition hover:scale-105 ${isFav ? "border-white bg-white/10" : "border-gray-500 bg-transparent"}`}
+            title={isFav ? "Unfollow" : "Follow"}
+        >
+            {image ? (
+                <img
+                    src={image}
+                    alt={name}
+                    className="w-16 h-16 rounded-full object-cover border"
+                />
+            ) : (
+                <span className="inline-block w-16 h-16 rounded-full bg-gray-400" />
+            )}
+            <span className="text-xs sm:text-sm text-center break-words">{name}</span>
+            <span className="text-lg leading-none">{isFav ? "−" : "+"}</span>
+        </button>
+    );
 
-    const TeamChip = ({ t }) => {
-        const isFav = favTeamIds.has(t.id);
-        return (
-            <button
-                onClick={() => toggleTeam(t.id)}
-                className={`flex flex-col items-center gap-1 border rounded-2xl p-3 w-24 transition hover:scale-105 ${isFav ? "border-white bg-white/10" : "border-gray-500 bg-transparent"
-                    }`}
-                title={isFav ? "Unfollow" : "Follow"}
-            >
-                {t.logo ? (
-                    <img
-                        src={t.logo}
-                        alt={t.teamName}
-                        className="w-12 h-12 rounded-full object-cover border"
-                    />
-                ) : (
-                    <span className="inline-block w-12 h-12 rounded-full bg-gray-400" />
-                )}
-                <span className="text-sm text-center truncate">{t.teamName}</span>
-                <span className="text-lg leading-none">{isFav ? "−" : "+"}</span>
-            </button>
-        );
-    };
+    const TeamChip = ({ t }) => (
+        <RoundChip
+            isFav={favTeamIds.has(t.id)}
+            image={t.logo}
+            name={t.teamName}
+            onClick={() => toggleTeam(t.id)}
+        />
+    );
 
-
-    const TournamentChip = ({ tr }) => {
-        const isFav = favTournamentIds.has(tr.id);
-        return (
-            <button
-                onClick={() => toggleTournament(tr.id)}
-                className={`flex flex-col items-center justify-between border rounded-2xl p-3 w-28 h-36 transition hover:scale-105 ${isFav ? "border-white bg-white/10" : "border-gray-500 bg-transparent"
-                    }`}
-                title={isFav ? "Unfollow" : "Follow"}
-            >
-                {tr.image ? (
-                    <img
-                        src={tr.image}
-                        alt={tr.tournamentName}
-                        className="w-12 h-12 rounded-full object-cover border"
-                    />
-                ) : (
-                    <span className="inline-block w-12 h-12 rounded-full bg-gray-400" />
-                )}
-                <span className="text-center leading-tight max-w-[5rem] break-words text-xs sm:text-sm">
-                    {tr.tournamentName}
-                </span>
-                <span className="text-lg leading-none">{isFav ? "−" : "+"}</span>
-            </button>
-        );
-    };
-
+    const TournamentChip = ({ tr }) => (
+        <RoundChip
+            isFav={favTournamentIds.has(tr.id)}
+            image={tr.image}
+            name={tr.tournamentName}
+            onClick={() => toggleTournament(tr.id)}
+        />
+    );
 
     const handleCardClick = (item) => {
         setSelectedNews(item);
         setPopupOpen(true);
     };
 
-
     const closePopup = () => {
         setPopupOpen(false);
         setSelectedNews(null);
     };
-
 
     const Card = ({ item }) => (
         <article
@@ -223,38 +191,33 @@ const NewsLetter = () => {
         </article>
     );
 
-
     return (
         <div className="max-w-6xl mx-auto px-6 mt-24 text-white">
             <h1 className="text-4xl mb-6 border-b-2 border-gray-500">Cricket News & Scores</h1>
-
 
             {role === "FAN" && fan && (
                 <>
                     <section className="mb-10">
                         <h2 className="text-2xl font-semibold mb-3">Your Picks</h2>
 
-
                         <div className="mb-4">
                             <h3 className="text-lg mb-2 opacity-80">Teams</h3>
-                            <div className="flex flex-wrap gap-3">
+                            <div className="flex flex-wrap gap-4">
                                 {teams.length ? teams.map((t) => <TeamChip key={t.id} t={t} />) : (
                                     <span className="text-gray-400">No teams</span>
                                 )}
                             </div>
                         </div>
 
-
                         <div>
                             <h3 className="text-lg mb-2 opacity-80">Tournaments</h3>
-                            <div className="flex flex-wrap gap-3">
+                            <div className="flex flex-wrap gap-4">
                                 {tournaments.length ? tournaments.map((tr) => <TournamentChip key={tr.id} tr={tr} />) : (
                                     <span className="text-gray-400">No tournaments</span>
                                 )}
                             </div>
                         </div>
                     </section>
-
 
                     <section className="mb-12">
                         <h2 className="text-2xl font-semibold mb-4">Top for You</h2>
@@ -269,7 +232,6 @@ const NewsLetter = () => {
                 </>
             )}
 
-
             <section>
                 <h2 className="text-2xl font-semibold mb-4">{role === "FAN" ? "More News" : "All News"}</h2>
                 <div className="grid md:grid-cols-3 gap-8">
@@ -277,9 +239,6 @@ const NewsLetter = () => {
                 </div>
             </section>
 
-
-            {/* Popup */}
-            {/* Popup */}
             {popupOpen && selectedNews && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white text-black rounded-xl shadow-xl p-6 max-w-md w-full relative">
@@ -290,8 +249,6 @@ const NewsLetter = () => {
                             ✖
                         </button>
 
-
-                        {/* Image Container */}
                         <div className="w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
                             {selectedNews.imageLink ? (
                                 <img
@@ -304,25 +261,19 @@ const NewsLetter = () => {
                             )}
                         </div>
 
-
                         <h2 className="text-2xl font-bold mb-4">{selectedNews.subject}</h2>
                         <p className="mb-2">{selectedNews.summary}</p>
                         <p className="text-sm text-gray-700">
-                            <strong>Team:</strong>{" "}
-                            {selectedNews.teamName ? selectedNews.teamName : "N/A"}
+                            <strong>Team:</strong> {selectedNews.teamName ? selectedNews.teamName : "N/A"}
                         </p>
                         <p className="text-sm text-gray-700">
-                            <strong>Tournament:</strong>{" "}
-                            {selectedNews.tournamentName ? selectedNews.tournamentName : "N/A"}
+                            <strong>Tournament:</strong> {selectedNews.tournamentName ? selectedNews.tournamentName : "N/A"}
                         </p>
                     </div>
                 </div>
             )}
-
-
         </div>
     );
 };
-
 
 export default NewsLetter;
