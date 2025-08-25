@@ -7,7 +7,7 @@ const API_BASE = "https://batsup-v1-oauz.onrender.com";
 export default function TournamentManagement({
     selectedTournament,
     onTournamentSelect,
-    onError
+    onError,
 }) {
     const [tournaments, setTournaments] = useState([]);
     const [loadingTournaments, setLoadingTournaments] = useState(false);
@@ -42,7 +42,7 @@ export default function TournamentManagement({
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [onError]);
 
     const handleTournamentField = (field, val) =>
         setTournamentForm((p) => ({ ...p, [field]: val }));
@@ -90,7 +90,9 @@ export default function TournamentManagement({
         if (!window.confirm("Are you sure you want to delete this tournament?")) return;
         onError("");
         try {
-            const res = await fetch(`${API_BASE}/api/tournaments/${id}`, { method: "DELETE" });
+            const res = await fetch(`${API_BASE}/api/tournaments/${id}`, {
+                method: "DELETE",
+            });
             if (!res.ok) throw new Error("Delete failed");
             if (selectedTournament?.id === id) {
                 onTournamentSelect(null);
@@ -107,12 +109,15 @@ export default function TournamentManagement({
                 <Empty>Loading tournaments…</Empty>
             ) : (
                 <>
-                    <div className="flex flex-wrap gap-2 mb-6 ">
+                    <div className="flex flex-wrap gap-2 mb-6">
                         {tournaments.length === 0 ? (
                             <Empty>No tournaments found.</Empty>
                         ) : (
                             tournaments.map((t) => (
-                                <div key={t.id} className="relative group rounded border bg-gray-800 border-gray-700 flex items-center">
+                                <div
+                                    key={t.id}
+                                    className="relative group rounded border bg-gray-800 border-gray-700 flex items-center"
+                                >
                                     <button
                                         className={clsx(
                                             "px-4 py-2 rounded border flex-1 text-left",
@@ -124,7 +129,7 @@ export default function TournamentManagement({
                                     >
                                         {t.tournamentName || t.title || t.name}
                                     </button>
-                                    
+
                                     <button
                                         onClick={() => deleteTournament(t.id)}
                                         title="Delete Tournament"

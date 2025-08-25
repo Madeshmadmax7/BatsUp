@@ -9,7 +9,7 @@ const LoginRegister = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
-    const [errors, setErrors] = useState({ email: "", password: "" });
+    const [errors, setErrors] = useState({ email: "", password: "", teamName: "", teamPassword: "" });
 
     const { setUser } = useAuth();
     const navigate = useNavigate();
@@ -43,7 +43,7 @@ const LoginRegister = () => {
 
     const validateForm = () => {
         let valid = true;
-        let newErrors = { email: "", password: "" };
+        let newErrors = { email: "", password: "", teamName: "", teamPassword: "" };
 
         if (!validateEmail(email)) {
             newErrors.email = "Invalid email format";
@@ -53,6 +53,17 @@ const LoginRegister = () => {
             newErrors.password =
                 "Password must be at least 6 characters and contain letters & numbers";
             valid = false;
+        }
+
+        if (isRegister && role === "PLAYER") {
+            if (!playerData.teamName.trim()) {
+                newErrors.teamName = "Team Name is required";
+                valid = false;
+            }
+            if (!playerData.teamPassword.trim()) {
+                newErrors.teamPassword = "Team Password is required";
+                valid = false;
+            }
         }
 
         setErrors(newErrors);
@@ -99,6 +110,14 @@ const LoginRegister = () => {
         if (!validateForm()) return;
 
         try {
+            // For PLAYER role: do not proceed if teamName or teamPassword missing
+            if (role === "PLAYER") {
+                if (!playerData.teamName.trim() || !playerData.teamPassword.trim()) {
+                    alert("Team Name and Team Password are mandatory for Player registration.");
+                    return;
+                }
+            }
+
             const userResponse = await fetch("https://batsup-v1-oauz.onrender.com/api/user/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -172,7 +191,7 @@ const LoginRegister = () => {
     };
 
     return (
-        <div className="flex min-h-screen bg-[#FFF7E9] overflow-hidden">
+        <div className="flex flex-col md:flex-row min-h-screen bg-[#FFF7E9] overflow-hidden">
             {/* Left Panel */}
             <div className="hidden md:flex w-1/2 bg-[#FFF7E9] items-center justify-center p-8">
                 <div className="text-center">
@@ -224,10 +243,7 @@ const LoginRegister = () => {
                     </div>
 
                     {/* Form */}
-                    <form
-                        onSubmit={isRegister ? handleRegister : handleLogin}
-                        className="space-y-3"
-                    >
+                    <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-3">
                         <div>
                             <label className="block mb-1 text-xs text-black">Email</label>
                             <input
@@ -273,6 +289,12 @@ const LoginRegister = () => {
                                         <option value="PLAYER">Player</option>
                                         <option value="FAN">Fan</option>
                                     </select>
+                                    {errors.teamName && (
+                                        <p className="text-red-500 text-xs mt-1">{errors.teamName}</p>
+                                    )}
+                                    {errors.teamPassword && (
+                                        <p className="text-red-500 text-xs mt-1">{errors.teamPassword}</p>
+                                    )}
                                 </div>
 
                                 {role === "PLAYER" && (
@@ -342,9 +364,7 @@ const LoginRegister = () => {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block mb-1 text-xs text-black">
-                                                Region
-                                            </label>
+                                            <label className="block mb-1 text-xs text-black">Region</label>
                                             <input
                                                 type="text"
                                                 placeholder="Region"

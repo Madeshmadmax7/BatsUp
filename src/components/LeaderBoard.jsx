@@ -16,11 +16,11 @@ export default function LeaderBoard({ onError }) {
     useEffect(() => {
         setLoadingTournaments(true);
         fetch(`${API_BASE}/api/tournaments/all`)
-            .then(res => {
+            .then((res) => {
                 if (!res.ok) throw new Error("Failed to load tournaments");
                 return res.json();
             })
-            .then(data => setTournaments(Array.isArray(data) ? data : []))
+            .then((data) => setTournaments(Array.isArray(data) ? data : []))
             .catch(() => onError?.("Failed to load tournaments"))
             .finally(() => setLoadingTournaments(false));
     }, [onError]);
@@ -33,11 +33,11 @@ export default function LeaderBoard({ onError }) {
         }
         setLoadingTeams(true);
         fetch(`${API_BASE}/api/tournaments/${selectedTournament.id}/teams`)
-            .then(res => {
+            .then((res) => {
                 if (!res.ok) throw new Error("Failed to load teams");
                 return res.json();
             })
-            .then(data => setTeams(Array.isArray(data) ? data : []))
+            .then((data) => setTeams(Array.isArray(data) ? data : []))
             .catch(() => onError?.("Failed to load teams"))
             .finally(() => setLoadingTeams(false));
     }, [selectedTournament, onError]);
@@ -49,24 +49,27 @@ export default function LeaderBoard({ onError }) {
         }
         setLoadingLeaderboard(true);
         fetch(`${API_BASE}/api/leaderboard/tournament/${selectedTournament.id}`)
-            .then(res => {
+            .then((res) => {
                 if (!res.ok) throw new Error("Failed to load leaderboard");
                 return res.json();
             })
-            .then(data => {
+            .then((data) => {
                 if (Array.isArray(data) && data.length) {
                     const sorted = data.sort((a, b) => a.rank - b.rank);
-                    setLeaderboard(sorted.map(e => ({
-                        ...e,
-                        // Always default to string for input, to keep things controlled
-                        netRate: e.netRunRate !== undefined && e.netRunRate !== null ? e.netRunRate : "",
-                        matchesPlayed: e.matchesPlayed ?? "",
-                        matchesWon: e.matchesWon ?? "",
-                        matchesLost: e.matchesLost ?? "",
-                        points: e.points ?? ""
-                    })));
+                    setLeaderboard(
+                        sorted.map((e) => ({
+                            ...e,
+                            netRate:
+                                e.netRunRate !== undefined && e.netRunRate !== null
+                                    ? e.netRunRate
+                                    : "",
+                            matchesPlayed: e.matchesPlayed ?? "",
+                            matchesWon: e.matchesWon ?? "",
+                            matchesLost: e.matchesLost ?? "",
+                            points: e.points ?? "",
+                        }))
+                    );
                 } else {
-                    // New leaderboard: fill from teams
                     const initEntries = teams
                         .slice()
                         .sort((a, b) => a.name.localeCompare(b.name))
@@ -89,9 +92,10 @@ export default function LeaderBoard({ onError }) {
             .finally(() => setLoadingLeaderboard(false));
     }, [selectedTournament, teams, onError]);
 
-    const updateRanks = list => list.map((item, idx) => ({ ...item, rank: idx + 1 }));
+    const updateRanks = (list) =>
+        list.map((item, idx) => ({ ...item, rank: idx + 1 }));
 
-    const moveUp = idx => {
+    const moveUp = (idx) => {
         if (idx === 0) return;
         const newList = [...leaderboard];
         [newList[idx], newList[idx - 1]] = [newList[idx - 1], newList[idx]];
@@ -101,7 +105,7 @@ export default function LeaderBoard({ onError }) {
         setTimeout(() => setHighlightedId(null), 1200);
     };
 
-    const moveDown = idx => {
+    const moveDown = (idx) => {
         if (idx === leaderboard.length - 1) return;
         const newList = [...leaderboard];
         [newList[idx], newList[idx + 1]] = [newList[idx + 1], newList[idx]];
@@ -112,22 +116,24 @@ export default function LeaderBoard({ onError }) {
     };
 
     const handleChange = (id, field, value) => {
-        setLeaderboard(lb =>
-            lb.map(entry =>
+        setLeaderboard((lb) =>
+            lb.map((entry) =>
                 entry.id === id || (entry.id === null && id === null)
                     ? {
                         ...entry,
                         [field]:
-                            value === "" ? "" :
-                                field === "netRate" ? value : // keep as string for input, parse before sending
-                                    value
+                            value === ""
+                                ? ""
+                                : field === "netRate"
+                                    ? value
+                                    : value,
                     }
                     : entry
             )
         );
     };
 
-    const safeInputValue = v => v === undefined || v === null ? "" : v;
+    const safeInputValue = (v) => (v === undefined || v === null ? "" : v);
 
     const handleSave = async () => {
         setSaving(true);
@@ -138,13 +144,12 @@ export default function LeaderBoard({ onError }) {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         ...entry,
-                        // Backend expects netRunRate! Convert the controlled input here:
                         netRunRate: entry.netRate === "" ? 0 : parseFloat(entry.netRate),
-                        netRate: undefined, // don't send extraneous key
+                        netRate: undefined,
                         matchesPlayed: entry.matchesPlayed === "" ? 0 : parseInt(entry.matchesPlayed),
                         matchesWon: entry.matchesWon === "" ? 0 : parseInt(entry.matchesWon),
                         matchesLost: entry.matchesLost === "" ? 0 : parseInt(entry.matchesLost),
-                        points: entry.points === "" ? 0 : parseInt(entry.points)
+                        points: entry.points === "" ? 0 : parseInt(entry.points),
                     }),
                 });
             }
@@ -163,11 +168,13 @@ export default function LeaderBoard({ onError }) {
                 <p>Loading tournaments...</p>
             ) : (
                 <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {tournaments.map(t => (
+                    {tournaments.map((t) => (
                         <button
                             key={t.id}
                             onClick={() => setSelectedTournament(t)}
-                            className={`p-4 rounded border ${selectedTournament?.id === t.id ? "border-yellow-400 bg-gray-800" : "border-gray-900"
+                            className={`p-4 rounded border ${selectedTournament?.id === t.id
+                                    ? "border-yellow-400 bg-gray-800"
+                                    : "border-gray-900"
                                 } hover:border-yellow-400 transition`}
                         >
                             <h2 className="font-semibold text-lg">{t.name}</h2>
@@ -190,7 +197,9 @@ export default function LeaderBoard({ onError }) {
                         <p>Loading leaderboard...</p>
                     ) : (
                         <>
-                            <h2 className="text-yellow-400 font-semibold text-2xl mb-4">Leaderboard</h2>
+                            <h2 className="text-yellow-400 font-semibold text-2xl mb-4">
+                                Leaderboard
+                            </h2>
                             <table className="w-full border-collapse bg-gray-900 rounded-md">
                                 <thead>
                                     <tr className="border-b border-gray-700 text-white">
@@ -217,9 +226,9 @@ export default function LeaderBoard({ onError }) {
                                                 <input
                                                     type="number"
                                                     min={0}
-                                                    className="w-full rounded px-1 py-1 text-white"
+                                                    className="w-full rounded px-1 py-1 text-white bg-gray-800 border border-gray-600"
                                                     value={safeInputValue(entry.matchesPlayed)}
-                                                    onChange={e =>
+                                                    onChange={(e) =>
                                                         handleChange(entry.id, "matchesPlayed", e.target.value)
                                                     }
                                                 />
@@ -228,9 +237,9 @@ export default function LeaderBoard({ onError }) {
                                                 <input
                                                     type="number"
                                                     min={0}
-                                                    className="w-full rounded px-1 py-1 text-white"
+                                                    className="w-full rounded px-1 py-1 text-white bg-gray-800 border border-gray-600"
                                                     value={safeInputValue(entry.matchesWon)}
-                                                    onChange={e =>
+                                                    onChange={(e) =>
                                                         handleChange(entry.id, "matchesWon", e.target.value)
                                                     }
                                                 />
@@ -239,9 +248,9 @@ export default function LeaderBoard({ onError }) {
                                                 <input
                                                     type="number"
                                                     min={0}
-                                                    className="w-full rounded px-1 py-1 text-white"
+                                                    className="w-full rounded px-1 py-1 text-white bg-gray-800 border border-gray-600"
                                                     value={safeInputValue(entry.matchesLost)}
-                                                    onChange={e =>
+                                                    onChange={(e) =>
                                                         handleChange(entry.id, "matchesLost", e.target.value)
                                                     }
                                                 />
@@ -250,9 +259,9 @@ export default function LeaderBoard({ onError }) {
                                                 <input
                                                     type="number"
                                                     min={0}
-                                                    className="w-full rounded px-1 py-1 text-white"
+                                                    className="w-full rounded px-1 py-1 text-white bg-gray-800 border border-gray-600"
                                                     value={safeInputValue(entry.points)}
-                                                    onChange={e =>
+                                                    onChange={(e) =>
                                                         handleChange(entry.id, "points", e.target.value)
                                                     }
                                                 />
@@ -261,9 +270,9 @@ export default function LeaderBoard({ onError }) {
                                                 <input
                                                     type="number"
                                                     step="0.01"
-                                                    className="w-full rounded px-1 py-1 text-white"
+                                                    className="w-full rounded px-1 py-1 text-white bg-gray-800 border border-gray-600"
                                                     value={safeInputValue(entry.netRate)}
-                                                    onChange={e =>
+                                                    onChange={(e) =>
                                                         handleChange(entry.id, "netRate", e.target.value)
                                                     }
                                                 />

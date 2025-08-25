@@ -1,101 +1,105 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useAuth } from "../AuthContext";
 
 const RegisteredTournaments = () => {
-    const { user } = useAuth();
     const [teamTournaments, setTeamTournaments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
     useEffect(() => {
-        if (!user?.playerId) {
-            setLoading(false);
-            return;
-        }
-
-        const fetchTournaments = async () => {
+        async function fetchTournaments() {
             try {
-                const res = await axios.get(
-                    `https://batsup-v1-oauz.onrender.com/api/player/${user.playerId}/tournaments`
-                );
+                const res = await axios.get("https://batsup-v1.oz/api/player/tournaments");
                 setTeamTournaments(res.data);
             } catch (err) {
-                console.error(err);
                 setError("Failed to load tournaments");
             } finally {
                 setLoading(false);
             }
-        };
+        }
 
         fetchTournaments();
-    }, [user]);
+    }, []);
 
     if (loading)
         return (
-            <p className="text-center text-gray-400 mt-20 text-lg">Loading tournaments...</p>
+            <div className="flex justify-center items-center min-h-screen bg-black text-white text-lg">
+                Loading tournaments...
+            </div>
         );
+
     if (error)
         return (
-            <p className="text-center text-red-600 mt-20 font-semibold text-lg">{error}</p>
+            <div className="flex justify-center items-center min-h-screen bg-black text-red-600 text-lg font-semibold">
+                {error}
+            </div>
         );
+
     if (!teamTournaments.length)
         return (
-            <p className="text-center text-gray-400 mt-20 text-lg">No tournaments found</p>
+            <div className="flex justify-center items-center min-h-screen bg-black text-white text-lg">
+                No tournaments found
+            </div>
         );
 
     const Card = ({ tournament }) => (
-        <div
-            className="bg-white text-black rounded-2xl overflow-hidden shadow-lg hover:scale-[1.03] hover:shadow-2xl transition-all duration-300 cursor-pointer max-w-md mx-auto mb-6"
+        <article
+            role="button"
+            tabIndex={0}
+            className="bg-gray-800 rounded-xl shadow-lg overflow-hidden transition transform hover:scale-[1.03] hover:shadow-2xl cursor-pointer max-w-md mx-auto mb-6 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            aria-label={`Tournament: ${tournament.tournamentName}`}
         >
             <div className="relative">
                 {tournament.image ? (
                     <img
-                        src={`https://batsup-v1-oauz.onrender.com/images/tournaments/${tournament.image}`}
+                        src={`https://batsup-v1.oz/api/images/tournaments/${tournament.image}`}
                         alt={tournament.tournamentName}
                         className="w-full h-60 object-cover"
                     />
                 ) : (
-                    <div className="w-full h-60 bg-gray-300 flex items-center justify-center text-gray-500 font-semibold">
+                    <div className="w-full h-60 bg-gray-700 flex items-center justify-center text-gray-400 font-semibold">
                         No Image Available
                     </div>
                 )}
-                <span className="absolute top-4 left-4 bg-gray-900 text-white text-xs font-bold px-3 py-1 rounded-full">
+                <span className="absolute top-4 left-4 bg-gray-900 bg-opacity-75 text-white text-xs font-bold px-3 py-1 rounded">
                     LEARN MORE
                 </span>
             </div>
             <div className="p-6">
-                <div className="flex items-center gap-2 mb-2">
-                    <span className="bg-yellow-400 text-black text-xs px-2 py-1 rounded uppercase font-semibold">
+                <div className="flex items-center gap-2 mb-3">
+                    <span className="bg-yellow-400 text-black font-bold uppercase px-3 py-1 rounded">
                         {tournament.matchType || "N/A"}
                     </span>
-                    <span className="text-sm text-gray-600">
-                        {new Date(tournament.startDate).toLocaleDateString("en-GB")}
-                    </span>
+                    <time dateTime={new Date(tournament.startDate).toISOString()} className="text-sm text-gray-300">
+                        {new Date(tournament.startDate).toLocaleDateString()}
+                    </time>
                 </div>
-                <h3 className="text-xl font-semibold mb-2">{tournament.tournamentName}</h3>
-                <p className="text-gray-700 mb-2">
-                    <span className="font-semibold">Location: </span>
-                    {tournament.location || "N/A"}
-                </p>
-                <p className="text-gray-700 mb-2">
-                    <span className="font-semibold">Teams: </span>
-                    {(tournament.teamNames && tournament.teamNames.join(", ")) || "N/A"}
-                </p>
-                {/* Removed the Join Tournament button as requested */}
+                <h3 className="text-xl font-semibold truncate">{tournament.tournamentName}</h3>
+                <p className="text-gray-300 mt-2">{tournament.description || "No description available."}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                    {(tournament.teamNames || []).map((team, i) => (
+                        <span
+                            key={i}
+                            className="bg-purple-600 text-white rounded-full px-3 py-1 text-xs truncate max-w-full"
+                            title={team}
+                        >
+                            {team}
+                        </span>
+                    ))}
+                </div>
             </div>
-        </div>
+        </article>
     );
 
     return (
-        <div className="bg-black min-h-screen px-6 py-10 text-white overflow-x-hidden">
-            <h2 className="text-4xl font-bold mb-10 text-center mt-14">My Joined Team Tournaments</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-                {teamTournaments.map((t) => (
-                    <Card key={t.id} tournament={t} />
+        <main className="bg-black min-h-screen p-6 text-white">
+            <h1 className="text-4xl text-center font-bold mb-14">My Joined Tournaments</h1>
+            <section className="max-w-7xl mx-auto grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                {teamTournaments.map((tournament) => (
+                    <Card key={tournament.id} tournament={tournament} />
                 ))}
-            </div>
-        </div>
+            </section>
+        </main>
     );
 };
 

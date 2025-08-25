@@ -85,49 +85,47 @@ const TeamsPage = () => {
     };
 
     return (
-        <div className="bg-black min-h-screen px-6 py-10 text-white overflow-x-hidden">
-            <h2 className="text-4xl font-bold mb-10 text-center mt-14">All Teams</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+        <div className="bg-black min-h-screen px-4 sm:px-6 lg:px-10 py-10 text-white overflow-x-hidden">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-center">
+                All Teams
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
                 {teams.map((team) => {
                     const isFav = favTeamIds.has(team.id);
                     return (
                         <div
                             key={team.id}
-                            className="bg-white text-black rounded-2xl overflow-hidden shadow-lg hover:scale-[1.03] hover:shadow-2xl transition-all duration-300 cursor-pointer"
-                            onClick={() => setSelectedTeam(team)} // kept your existing onclick here
+                            className="bg-white text-black rounded-2xl overflow-hidden shadow-lg transform transition-transform duration-300 hover:scale-105 cursor-pointer"
+                            onClick={() => setSelectedTeam(team)}
+                            tabIndex={0}
+                            role="button"
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") setSelectedTeam(team);
+                            }}
                         >
                             <img
                                 src={team.logo || DEFAULT_LOGO}
                                 alt={team.name}
-                                className="w-full h-60 object-cover"
+                                className="w-full h-48 sm:h-56 md:h-60 object-cover"
+                                loading="lazy"
                             />
-                            <div className="p-6">
-                                <h3 className="text-xl font-semibold mb-2">{team.name}</h3>
-                                <p className="text-gray-700 mb-2">Location: {team.location ?? "Unknown"}</p>
-
-                                {/* Player List in card
-                                <h4 className="text-lg font-semibold mb-1">Players:</h4>
-                                <ul className="mb-3 max-h-24 overflow-y-auto">
-                                    {getPlayersOfTeam(team.id).length > 0 ? (
-                                        getPlayersOfTeam(team.id).map((player) => (
-                                            <li key={player.id} className="text-sm text-gray-600">
-                                                {player.playerName || player.nickname || player.name} – {player.role}
-                                            </li>
-                                        ))
-                                    ) : (
-                                        <li className="text-gray-500 text-sm">No players available</li>
-                                    )}
-                                </ul> */}
-
-                                {/* Follow button */}
-                                {role === "FAN" && fan && (
+                            <div className="p-4 sm:p-6">
+                                <h3 className="text-xl sm:text-2xl font-semibold mb-2 truncate">
+                                    {team.name}
+                                </h3>
+                                <p className="text-gray-700 text-sm sm:text-base mb-2">
+                                    Location: {team.location ?? "Unknown"}
+                                </p>
+                                {role === "FAN" && (
                                     <button
                                         onClick={(e) => {
-                                            e.stopPropagation(); // prevent card onClick
+                                            e.stopPropagation();
                                             toggleTeam(team.id);
                                         }}
-                                        className={`px-3 py-1 rounded-md text-sm font-semibold transition ${isFav ? "bg-red-500 text-white" : "bg-green-500 text-white"
-                                            }`}
+                                        className={`w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-md transition ${isFav
+                                                ? "bg-red-600 text-white"
+                                                : "bg-green-600 text-white"
+                                            } hover:opacity-90`}
                                     >
                                         {isFav ? "Unfollow" : "Follow"}
                                     </button>
@@ -138,47 +136,68 @@ const TeamsPage = () => {
                 })}
             </div>
 
-            {/* Popup / Modal on team click */}
             {selectedTeam && (
                 <div
-                    className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
-                    onClick={() => setSelectedTeam(null)} // close modal on outside click
+                    className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 overflow-auto p-4"
+                    onClick={() => setSelectedTeam(null)}
+                    role="dialog"
+                    tabIndex={-1}
+                    aria-modal="true"
+                    aria-labelledby="modal-title"
                 >
                     <div
-                        className="bg-white text-black w-[90%] max-w-2xl rounded-2xl shadow-lg overflow-hidden relative"
-                        onClick={(e) => e.stopPropagation()} // prevent closing on modal click
+                        className="bg-white text-black rounded-3xl w-full max-w-lg shadow-lg max-h-[80vh] overflow-y-auto outline-none"
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <button
+                            className="absolute top-4 right-4 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-600"
                             onClick={() => setSelectedTeam(null)}
-                            className="absolute top-3 right-3 text-gray-700 hover:text-black text-xl"
+                            aria-label="Close modal"
                         >
-                            ✕
+                            <span aria-hidden="true" className="text-3xl font-bold cursor-pointer">
+                                &times;
+                            </span>
                         </button>
 
                         <img
                             src={selectedTeam.logo || DEFAULT_LOGO}
                             alt={selectedTeam.name}
-                            className="w-full h-56 object-cover"
+                            className="w-full h-56 object-cover rounded-t-3xl"
+                            loading="lazy"
                         />
 
                         <div className="p-6">
-                            <h2 className="text-2xl font-bold mb-2">{selectedTeam.name}</h2>
-                            <p className="text-gray-700 mb-2">
-                                         {selectedTeam.location ?? "world"}
+                            <h2 id="modal-title" className="text-2xl font-bold mb-3">
+                                {selectedTeam.name}
+                            </h2>
+                            <p className="text-gray-700 mb-6">
+                                {selectedTeam.location ?? "World"}
                             </p>
-
-                            <h3 className="text-lg font-semibold mb-2">Players:</h3>
-                            <ul className="mb-4 max-h-40 overflow-y-auto">
+                            <h3 className="text-lg font-semibold mb-3">Players</h3>
+                            <ul className="overflow-y-auto max-h-64 pr-3 space-y-2">
                                 {getPlayersOfTeam(selectedTeam.id).length > 0 ? (
-                                    getPlayersOfTeam(selectedTeam.id).map((p) => (
-                                        <li key={p.id} className="text-sm text-gray-600">
-                                            {p.playerName || p.nickname || p.name} – {p.role}
+                                    getPlayersOfTeam(selectedTeam.id).map((player) => (
+                                        <li
+                                            key={player.id}
+                                            className="border-b border-gray-300 pb-1 text-gray-700"
+                                        >
+                                            {player.jerseyNumber ? `#${player.jerseyNumber} — ` : ""}
+                                            {player.nickname || player.name}{" "}
+                                            {player.role ? `– ${player.role}` : ""}
                                         </li>
                                     ))
                                 ) : (
-                                    <li className="text-gray-500 text-sm">No players available</li>
+                                    <li className="italic text-gray-400">No players available</li>
                                 )}
                             </ul>
+                            <div className="mt-6 flex justify-end">
+                                <button
+                                    onClick={() => setSelectedTeam(null)}
+                                    className="bg-gray-300 hover:bg-gray-400 rounded-md px-5 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

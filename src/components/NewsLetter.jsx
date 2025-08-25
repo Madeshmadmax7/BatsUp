@@ -33,20 +33,22 @@ const NewsLetter = () => {
     const [selectedNews, setSelectedNews] = useState(null);
 
     useEffect(() => {
-        axios.get("https://batsup-v1-oauz.onrender.com/api/team/all")
+        axios
+            .get("https://batsup-v1-oauz.onrender.com/api/team/all")
             .then((r) => setTeams(r.data))
             .catch(() => setTeams([]));
 
-        axios.get("https://batsup-v1-oauz.onrender.com/api/tournaments/get")
+        axios
+            .get("https://batsup-v1-oauz.onrender.com/api/tournaments/get")
             .then((r) => setTournaments(r.data))
             .catch(() => setTournaments([]));
 
-        axios.get("https://batsup-v1-oauz.onrender.com/api/newsletter/all")
+        axios
+            .get("https://batsup-v1-oauz.onrender.com/api/newsletter/all")
             .then((r) => setNewsData(r.data))
             .catch(() => setNewsData([]));
     }, []);
 
-    // Resolve fan by userId if needed
     useEffect(() => {
         const needs = role === "FAN" && !user?.fanId && user?.id;
         if (!needs) return;
@@ -95,11 +97,14 @@ const NewsLetter = () => {
         next.has(teamId) ? next.delete(teamId) : next.add(teamId);
         const body = Array.from(next);
         try {
-            const res = await fetch(`https://batsup-v1-oauz.onrender.com/api/fan/${fan.id}/follow-teams`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(body),
-            });
+            const res = await fetch(
+                `https://batsup-v1-oauz.onrender.com/api/fan/${fan.id}/follow-teams`,
+                {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body),
+                }
+            );
             if (res.ok) setFan(await res.json());
         } catch { }
     };
@@ -110,11 +115,14 @@ const NewsLetter = () => {
         next.has(tid) ? next.delete(tid) : next.add(tid);
         const body = Array.from(next);
         try {
-            const res = await fetch(`https://batsup-v1-oauz.onrender.com/api/fan/${fan.id}/follow-tournaments`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(body),
-            });
+            const res = await fetch(
+                `https://batsup-v1-oauz.onrender.com/api/fan/${fan.id}/follow-tournaments`,
+                {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body),
+                }
+            );
             if (res.ok) setFan(await res.json());
         } catch { }
     };
@@ -216,7 +224,9 @@ const NewsLetter = () => {
                         <div className="mb-4">
                             <h3 className="text-lg mb-2 opacity-80">Teams</h3>
                             <div className="flex flex-wrap gap-3">
-                                {teams.length ? teams.map((t) => <TeamChip key={t.id} t={t} />) : (
+                                {teams.length ? (
+                                    teams.map((t) => <TeamChip key={t.id} t={t} />)
+                                ) : (
                                     <span className="text-gray-400">No teams</span>
                                 )}
                             </div>
@@ -225,7 +235,9 @@ const NewsLetter = () => {
                         <div>
                             <h3 className="text-lg mb-2 opacity-80">Tournaments</h3>
                             <div className="flex flex-wrap gap-3">
-                                {tournaments.length ? tournaments.map((tr) => <TournamentChip key={tr.id} tr={tr} />) : (
+                                {tournaments.length ? (
+                                    tournaments.map((tr) => <TournamentChip key={tr.id} tr={tr} />)
+                                ) : (
                                     <span className="text-gray-400">No tournaments</span>
                                 )}
                             </div>
@@ -235,10 +247,14 @@ const NewsLetter = () => {
                     <section className="mb-12">
                         <h2 className="text-2xl font-semibold mb-4">Top for You</h2>
                         {preferred.length === 0 ? (
-                            <p className="text-gray-400">No personalized news yet. Pick some favorites above.</p>
+                            <p className="text-gray-400">
+                                No personalized news yet. Pick some favorites above.
+                            </p>
                         ) : (
                             <div className="grid md:grid-cols-3 gap-8">
-                                {preferred.map((item) => <Card key={item.id} item={item} />)}
+                                {preferred.map((item) => (
+                                    <Card key={item.id} item={item} />
+                                ))}
                             </div>
                         )}
                     </section>
@@ -246,17 +262,20 @@ const NewsLetter = () => {
             )}
 
             <section>
-                <h2 className="text-2xl font-semibold mb-4">{role === "FAN" ? "More News" : "All News"}</h2>
+                <h2 className="text-2xl font-semibold mb-4">
+                    {role === "FAN" ? "More News" : "All News"}
+                </h2>
                 <div className="grid md:grid-cols-3 gap-8">
-                    {(role === "FAN" ? others : newsData).map((item) => <Card key={item.id} item={item} />)}
+                    {(role === "FAN" ? others : newsData).map((item) => (
+                        <Card key={item.id} item={item} />
+                    ))}
                 </div>
             </section>
 
             {/* Popup */}
-            {/* Popup */}
             {popupOpen && selectedNews && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white text-black rounded-xl shadow-xl p-6 max-w-md w-full relative">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white text-black rounded-xl shadow-xl p-6 max-w-md w-full relative max-h-[90vh] overflow-y-auto">
                         <button
                             onClick={closePopup}
                             className="absolute top-2 right-2 text-gray-600 hover:text-black"
@@ -290,171 +309,8 @@ const NewsLetter = () => {
                     </div>
                 </div>
             )}
-
         </div>
     );
 };
 
 export default NewsLetter;
-
-// import React, { useState } from "react";
-
-// import team1 from "../assets/pic-6.jpg";
-// import team2 from "../assets/pic-7.jpg";
-// import team3 from "../assets/pic-8.jpg";
-
-// const newsData = [
-// {
-//     id: 1,
-//     team: "Warriors",
-//     teamImg: team1,
-//     headline: "Warriors clinch thrilling win against Titans",
-//     summary:
-//     "In a nail-biting finish, Warriors secured victory with a last-over six.",
-//     score: "Warriors 245/7 - Titans 243/9",
-//     date: "Aug 10, 2025",
-// },
-// {
-//     id: 2,
-//     team: "Strikers",
-//     teamImg: team2,
-//     headline: "Strikers announce new captain for the season",
-//     summary:
-//     "Experienced batsman Rohit Sharma to lead Strikers for the upcoming tournaments.",
-//     score: null,
-//     date: "Aug 9, 2025",
-// },
-// {
-//     id: 3,
-//     team: "Titans",
-//     teamImg: team3,
-//     headline: "Titans sign promising young bowler",
-//     summary:
-//     "The Titans welcome 19-year-old fast bowler, aiming to boost their bowling attack.",
-//     score: null,
-//     date: "Aug 8, 2025",
-// },
-// ];
-
-// const teams = [
-// { id: 1, name: "Warriors", img: team1 },
-// { id: 2, name: "Strikers", img: team2 },
-// { id: 3, name: "Titans", img: team3 },
-// ];
-
-// const NewsLetter = () => {
-// const [favorites, setFavorites] = useState([]);
-
-// const toggleFavorite = (team) => {
-//     setFavorites((prev) =>
-//     prev.find((f) => f.id === team.id)
-//         ? prev.filter((f) => f.id !== team.id)
-//         : [...prev, team]
-//     );
-// };
-
-// return (
-//     <div className="max-w-6xl mx-auto px-6 mt-24 text-white">
-//     <section className="mb-12">
-//         <h2 className="text-3xl font-bold border-b-2 border-gray-500 pb-2 mb-6">
-//         Your Picks
-//         </h2>
-//         {favorites.length === 0 ? (
-//         <p className="text-gray-400 italic">No teams selected</p>
-//         ) : (
-//         <div className="flex space-x-6">
-//             {favorites.map(({ id, name, img }) => (
-//             <div key={id} className="flex flex-col items-center">
-//                 <img
-//                 src={img}
-//                 alt={name}
-//                 className="w-16 h-16 object-cover rounded-full border-2 border-gray-500 bg-white"
-//                 />
-//                 <span className="mt-2 text-white font-medium">{name}</span>
-//             </div>
-//             ))}
-//         </div>
-//         )}
-//     </section>
-
-//     <section>
-//         <h1 className="text-4xl font-bold mb-10 border-b-2 border-gray-500 pb-2">
-//         Cricket News & Scores
-//         </h1>
-
-//         <div className="grid md:grid-cols-3 gap-10">
-//         {newsData.map(
-//             ({ id, team, teamImg, headline, summary, score, date }) => (
-//             <article
-//                 key={id}
-//                 className="bg-white rounded-xl shadow-lg overflow-hidden transform transition duration-300 hover:shadow-2xl hover:scale-[1.02] text-gray-900"
-//             >
-//                 <img
-//                 src={teamImg}
-//                 alt={team}
-//                 className="w-full h-48 object-cover rounded-t-xl"
-//                 loading="lazy"
-//                 />
-//                 <div className="p-6">
-//                 <h2 className="text-2xl font-semibold mb-3 hover:text-gray-700 cursor-pointer">
-//                     {headline}
-//                 </h2>
-//                 <p className="mb-4 leading-relaxed">{summary}</p>
-//                 {score && (
-//                     <p className="inline-block bg-gray-200 text-gray-800 font-semibold text-sm px-3 py-1 rounded-lg mb-4">
-//                     Score: {score}
-//                     </p>
-//                 )}
-//                 <p className="text-sm text-gray-500">{date}</p>
-//                 </div>
-//             </article>
-//             )
-//         )}
-//         </div>
-//     </section>
-
-//     <section className="mt-20">
-//     <h2 className="text-3xl font-bold border-b-2 border-gray-500 pb-2 mb-6">
-//         Choose Your Teams
-//     </h2>
-//     <div className="flex space-x-8">
-//         {teams.map((team) => {
-//         const isFav = favorites.some((f) => f.id === team.id);
-//         return (
-//             <div
-//             key={team.id}
-//             className="flex flex-col items-center cursor-pointer select-none relative group"
-//             onClick={() => toggleFavorite(team)}
-//             >
-//             <div className="relative">
-//                 <img
-//                 src={team.img}
-//                 alt={team.name}
-//                 className={`w-20 h-20 object-cover rounded-full border-2 bg-white transition-transform duration-200 
-//                 ${isFav ? "border-gray-600" : "border-gray-400"} group-hover:scale-105`}
-//                 />
-
-//                 <div className="absolute inset-0 flex items-center justify-center 
-//                     rounded-full opacity-0 group-hover:opacity-100 hover:bg-black hover:opacity-70
-//                     transition-opacity duration-300">
-//                 <span className="text-white text-4xl font-bold drop-shadow-lg select-none">
-//                     {isFav ? "−" : "+"}
-//                 </span>
-//                 </div>
-
-//             </div>
-
-//             <span className="mt-3 text-white font-medium text-center">
-//                 {team.name}
-//             </span>
-//             </div>
-//         );
-//         })}
-//     </div>
-//     </section>
-
-//     </div>
-// );
-// };
-
-// export default NewsLetter;

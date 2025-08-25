@@ -1,8 +1,8 @@
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaSearch } from "react-icons/fa";
 import flag from "../assets/flag-india.png";
 import logo2 from "../assets/logo-2.png";
-import { useState } from "react";
 import { useAuth } from "../AuthContext";
 
 const Navbar = () => {
@@ -17,7 +17,7 @@ const Navbar = () => {
     before:content-[''] before:absolute before:w-full before:h-[2px] before:bg-white before:top-[-6px] before:left-0 before:scale-x-0 before:origin-left before:transition-transform before:duration-300 
     after:content-[''] after:absolute after:w-full after:h-[2px] after:bg-white after:bottom-[-6px] after:left-0 after:scale-x-0 after:origin-right after:transition-transform after:duration-300 
     hover:before:scale-x-100 hover:after:scale-x-100
-    `;
+  `;
 
     const navLinksForPlayer = [
         { name: "Home", to: "/" },
@@ -28,7 +28,7 @@ const Navbar = () => {
         { name: "Registered", to: "/registeredTournaments" },
         { name: "About", to: "/about" },
     ];
-    
+
     const navLinksForFan = [
         { name: "Home", to: "/" },
         { name: "Teams", to: "/teams" },
@@ -38,7 +38,7 @@ const Navbar = () => {
         { name: "Scores", to: "/scores" },
         { name: "About", to: "/about" },
     ];
-    
+
     const navLinksForUser = [
         { name: "Home", to: "/" },
         { name: "Tournaments", to: "/tournaments" },
@@ -47,7 +47,7 @@ const Navbar = () => {
         { name: "Newsletter", to: "/newsletter" },
         { name: "About", to: "/about" },
     ];
-    
+
     const navLinksForAdmin = [
         { name: "Home", to: "/" },
         { name: "Tournaments", to: "/tournaments" },

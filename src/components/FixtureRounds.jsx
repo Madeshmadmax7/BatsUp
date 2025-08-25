@@ -80,37 +80,8 @@ export default function FixtureRounds({
         for (const [k, arr] of map.entries()) {
             arr.sort((a, b) => a.id - b.id);
         }
-        return [...map.entries()].sort((a, b) => a - b); // fix here
+        return [...map.entries()].sort((a, b) => a[0] - b[0]); // fix here: use a[0] / b[0]
     }, [fixtureRounds]);
-
-    useEffect(() => {
-        const loadRounds = async () => {
-            if (!selectedTournament) {
-                setFixtureRounds([]);
-                return;
-            }
-            setLoadingRounds(true);
-            onError && onError("");
-            try {
-                const res = await axios.get(
-                    `${API_BASE}/api/round/tournament/${selectedTournament.id}`
-                );
-                const data = Array.isArray(res.data) ? res.data : [];
-                data.sort((a, b) => a.roundNumber - b.roundNumber || a.id - b.id);
-                setFixtureRounds(data);
-            } catch {
-                onError && onError("Failed to load rounds for this tournament.");
-                setFixtureRounds([]);
-            } finally {
-                setLoadingRounds(false);
-            }
-        };
-        loadRounds();
-    }, [
-        selectedTournament,
-        onError,
-        setFixtureRounds
-    ]);
 
     const onTeamClick = async (round, team, teamSlot) => {
         if (savingMatch) return;
@@ -140,12 +111,11 @@ export default function FixtureRounds({
                 selectedTeamOne &&
                 selectedTeamTwo &&
                 !savingMatch &&
-                (selectedTeamOne.id !== selectedTeamTwo.id)
+                selectedTeamOne.id !== selectedTeamTwo.id
             ) {
                 setSavingMatch(true);
                 onError("");
                 try {
-                    // Create match on backend
                     await axios.post(`${API_BASE}/api/matches/create`, null, {
                         params: {
                             roundId: selectedRound.id,
@@ -153,7 +123,6 @@ export default function FixtureRounds({
                             teamTwoId: selectedTeamTwo.id,
                         },
                     });
-                    // Reload fixtures for fresh state after creation
                     const res = await axios.get(
                         `${API_BASE}/api/round/tournament/${selectedTournament.id}`
                     );
@@ -230,8 +199,8 @@ export default function FixtureRounds({
                                                     {/* Team One */}
                                                     <div
                                                         className={`truncate ${selectedTeamOne?.id === m.teamOneId
-                                                            ? "bg-yellow-600 text-black rounded px-1"
-                                                            : ""
+                                                                ? "bg-yellow-600 text-black rounded px-1"
+                                                                : ""
                                                             }`}
                                                         onClick={() => {
                                                             setSelectedRound(round);
@@ -248,8 +217,8 @@ export default function FixtureRounds({
                                                     {/* Team Two */}
                                                     <div
                                                         className={`truncate ${selectedTeamTwo?.id === m.teamTwoId
-                                                            ? "bg-yellow-600 text-black rounded px-1"
-                                                            : ""
+                                                                ? "bg-yellow-600 text-black rounded px-1"
+                                                                : ""
                                                             }`}
                                                         onClick={() => {
                                                             setSelectedRound(round);
