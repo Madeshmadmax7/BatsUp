@@ -8,7 +8,7 @@ const Tournament = () => {
 
   useEffect(() => {
     axios
-      .get("https://batsup-vi-oz/api/tournaments")
+      .get("https://batsup-v1-oauz.onrender.com/api/tournaments/get")
       .then((res) => setTournaments(res.data))
       .catch(() => setTournaments([]));
   }, []);
