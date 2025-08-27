@@ -3,7 +3,7 @@ import { Trash2, Plus, X } from "lucide-react";
 import axios from "axios";
 import { Section } from "./SharedComponents";
 
-const API_BASE = "https://batsup-v1.a/api";
+const API_BASE = "https://batsup-v1.oz";
 
 // Utility for standardized fetch with error handling.
 async function fetchWithError(url, desc, options) {
@@ -241,9 +241,9 @@ export default function MatchScoreManagement() {
         async function fetchData() {
             try {
                 const [matchesRes, teamsRes, playersRes] = await Promise.all([
-                    fetchWithError(`${API_BASE}/matches/all`, "matches"),
-                    fetchWithError(`${API_BASE}/teams/all`, "teams"),
-                    fetchWithError(`${API_BASE}/players/all`, "players"),
+                    fetchWithError(`${API_BASE}/api/matches/all`, "matches"),
+                    fetchWithError(`${API_BASE}/api/teams/all`, "teams"),
+                    fetchWithError(`${API_BASE}/api/players/all`, "players"),
                 ]);
                 setMatches(matchesRes);
                 setTeams(teamsRes);
@@ -261,7 +261,7 @@ export default function MatchScoreManagement() {
             return;
         }
         setLoadingScores(true);
-        fetchWithError(`${API_BASE}/scorecard/${selectedMatch.id}`, "scorecards")
+        fetchWithError(`${API_BASE}/api/scorecard/${selectedMatch.id}`, "scorecards")
             .then(data => setScorecards(data))
             .catch(e => setError(e.message))
             .finally(() => setLoadingScores(false));
@@ -289,7 +289,7 @@ export default function MatchScoreManagement() {
     async function addEntry(playerId) {
         if (!selectedMatch) return;
         try {
-            await fetchWithError(`${API_BASE}/scorecard/create`, "create scorecard", {
+            await fetchWithError(`${API_BASE}/api/scorecard/create`, "create scorecard", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -301,7 +301,7 @@ export default function MatchScoreManagement() {
                     matchId: selectedMatch.id,
                 }),
             });
-            const updated = await fetchWithError(`${API_BASE}/scorecard/${selectedMatch.id}`, "fetch scorecards");
+            const updated = await fetchWithError(`${API_BASE}/api/scorecard/${selectedMatch.id}`, "fetch scorecards");
             setScorecards(updated);
         } catch (e) {
             alert("Error adding scorecard: " + e.message);
@@ -310,12 +310,12 @@ export default function MatchScoreManagement() {
 
     async function updateEntry(id, patch) {
         try {
-            await fetchWithError(`${API_BASE}/scorecard/${id}`, "update scorecard", {
+            await fetchWithError(`${API_BASE}/api/scorecard/${id}`, "update scorecard", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(patch),
             });
-            const updated = await fetchWithError(`${API_BASE}/scorecard/${selectedMatch.id}`, "fetch scorecards");
+            const updated = await fetchWithError(`${API_BASE}/api/scorecard/${selectedMatch.id}`, "fetch scorecards");
             setScorecards(updated);
         } catch (e) {
             alert("Error updating scorecard: " + e.message);
@@ -324,8 +324,8 @@ export default function MatchScoreManagement() {
 
     async function deleteEntry(id) {
         try {
-            await fetchWithError(`${API_BASE}/scorecard/${id}`, "delete scorecard", { method: "DELETE" });
-            const updated = await fetchWithError(`${API_BASE}/scorecard/${selectedMatch.id}`, "fetch scorecards");
+            await fetchWithError(`${API_BASE}/api/scorecard/${id}`, "delete scorecard", { method: "DELETE" });
+            const updated = await fetchWithError(`${API_BASE}/api/scorecard/${selectedMatch.id}`, "fetch scorecards");
             setScorecards(updated);
         } catch (e) {
             alert("Error deleting scorecard: " + e.message);
