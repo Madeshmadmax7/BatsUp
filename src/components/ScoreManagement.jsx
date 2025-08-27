@@ -241,9 +241,9 @@ export default function MatchScoreManagement() {
         async function fetchData() {
             try {
                 const [matchesRes, teamsRes, playersRes] = await Promise.all([
-                    fetchWithError(`${API_BASE}/matches`, "matches"),
-                    fetchWithError(`${API_BASE}/teams`, "teams"),
-                    fetchWithError(`${API_BASE}/players`, "players"),
+                    fetchWithError(`${API_BASE}/matches/all`, "matches"),
+                    fetchWithError(`${API_BASE}/teams/all`, "teams"),
+                    fetchWithError(`${API_BASE}/players/all`, "players"),
                 ]);
                 setMatches(matchesRes);
                 setTeams(teamsRes);
