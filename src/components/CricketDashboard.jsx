@@ -132,7 +132,7 @@ const CricketCards = () => {
                         {/* Match cards */}
                         <div className="flex gap-6 overflow-x-auto hide-scrollbar mb-6">
                             {matchCards.length === 0 && (
-                                <p className="text-white/70 text-sm">No match data available.</p>
+                                <p className="text-white/70 text-sm"></p>
                             )}
                             {matchCards.map((match, idx) => (
                                 <div
