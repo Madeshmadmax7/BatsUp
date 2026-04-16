@@ -1,3 +1,6 @@
 [submodule "cricket-tournament-app"]
 	path = cricket-tournament-app
 	url = https://github.com/Madeshmadmax7/batsup-ui.git
+[submodule "cricket-backend"]
+	path = cricket-backend
+	url = https://github.com/Madeshmadmax7/batsup-api.git
