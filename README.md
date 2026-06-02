@@ -20,7 +20,7 @@
 <br/>
 <br/>
 
-<img src="./screenshots/dashboard.gif" width="95%" />
+<img src="./screenshots/dashboard.png" width="95%" />
 
 <br/>
 
@@ -58,7 +58,6 @@ BatsUp Manager combines a React frontend, Spring Boot backend, Tailwind CSS styl
 
 <br/>
 
-# Live Demo
 
 <div align="center">
 
@@ -115,20 +114,20 @@ Experience the complete tournament management workflow including match schedulin
 
 <table width="100%">
 <tr>
-<th width="50%" align="center">Match Scheduler</th>
-<th width="50%" align="center">Fixture Management</th>
+<th width="50%" align="center">Tournament Register</th>
+<th width="50%" align="center">Team Registering</th>
 </tr>
 
 <tr>
 <td align="center" valign="top">
 
-<img src="./screenshots/match-scheduling.png" alt="Match Scheduling"/>
+<img src="./screenshots/tournament-registering.png" alt="tournament-registering"/>
 
 </td>
 
 <td align="center" valign="top">
 
-<img src="./screenshots/fixture-management.png" alt="Fixture Management"/>
+<img src="./screenshots/team-creation.png" alt="team-creation"/>
 
 </td>
 </tr>
@@ -155,7 +154,7 @@ The scheduling engine enables organizers to create fixtures, assign venues, mana
 
 <div align="center">
 
-<img src="./screenshots/tournament-analytics.png" width="90%" />
+<img src="./screenshots/scorecard.png" width="90%" />
 
 </div>
 
@@ -180,7 +179,7 @@ Advanced analytics provide insights into tournament progress, team standings, pl
 
 <div align="center">
 
-<img src="./screenshots/team-management.png" width="90%" />
+<img src="./screenshots/team-creation.png" width="90%" />
 
 </div>
 
