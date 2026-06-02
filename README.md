@@ -3,28 +3,28 @@
 <br/>
 
 <a href="https://github.com/Madeshmadmax7/BatsUp">
-  <img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=58&duration=3000&pause=1500&color=FFFFFF&background=09090B00&center=true&vCenter=true&width=850&height=100&lines=BATSUP+MANAGER" alt="BATSUP MANAGER" />
+  <img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=58&duration=3000&pause=1500&color=FFFFFF&background=09090B00&center=true&vCenter=true&width=850&height=100&lines=BATSUP" alt="BATSUP" />
 </a>
 
-<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&size=14&duration=4000&pause=1000&color=8B949E&center=true&vCenter=true&width=700&height=30&lines=Cricket+Tournament+Management+System;React+%7C+Vite+%7C+Tailwind+CSS+%7C+Axios+%7C+RESTful+API" alt="tagline" />
+<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&size=14&duration=4000&pause=1000&color=8B949E&center=true&vCenter=true&width=700&height=30&lines=Cricket+Tournament+Management+System;React+%7C+Spring+Boot+%7C+Tailwind+CSS+%7C+MySQL" alt="tagline" />
 
 <br/>
 <br/>
 
 ![React](https://img.shields.io/badge/React-Frontend-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![Vite](https://img.shields.io/badge/Vite-Build-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-Backend-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-Styling-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
-![Axios](https://img.shields.io/badge/Axios-HTTP-5A29E4?style=for-the-badge&logo=axios&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![Java](https://img.shields.io/badge/Java-17+-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
 
 <br/>
 <br/>
 
-<img src="./screenshots/dashboard.png" width="95%" />
+<img src="./screenshots/dashboard.gif" width="95%" />
 
 <br/>
 
-**BatsUp Manager is a comprehensive cricket tournament management platform designed to streamline tournament organization, player statistics tracking, team management, and match scheduling through an intuitive web interface and seamless API integration.**
+**BatsUp Manager is a full-stack cricket tournament management platform built using React, Spring Boot, Tailwind CSS, and MySQL. It streamlines tournament organization, player statistics tracking, team management, match scheduling, analytics, and communication through a modern responsive interface backed by scalable REST APIs and relational database architecture.**
 
 <br/>
 
@@ -54,7 +54,21 @@
 
 ## Overview
 
-BatsUp Manager combines a React frontend, modern build tooling with Vite, responsive Tailwind CSS styling, and RESTful API integration into a unified platform capable of managing tournaments, tracking player statistics, scheduling matches, and visualizing tournament data in real time.
+BatsUp Manager combines a React frontend, Spring Boot backend, Tailwind CSS styling, and MySQL database into a unified platform capable of managing tournaments, tracking player statistics, scheduling matches, organizing teams, broadcasting updates, and visualizing tournament insights in real time.
+
+<br/>
+
+# Live Demo
+
+<div align="center">
+
+<img src="./screenshots/dashboard.gif" width="100%" />
+
+</div>
+
+<br/>
+
+Experience the complete tournament management workflow including match scheduling, tournament analytics, team management, and newsletter operations through a modern responsive interface.
 
 <br/>
 
@@ -67,12 +81,12 @@ BatsUp Manager combines a React frontend, modern build tooling with Vite, respon
 
 - Comprehensive tournament management
 - Real-time player statistics tracking
-- Interactive team management interface
+- Interactive team management
 - Match scheduling and organization
-- Intuitive analytics dashboard
+- Analytics and tournament insights
 - Responsive web design
-- Seamless API integration
-- Fast and lightweight application
+- Secure REST API integration
+- Fast and scalable architecture
 
 </td>
 
@@ -80,13 +94,13 @@ BatsUp Manager combines a React frontend, modern build tooling with Vite, respon
 
 ## Built With
 
-- **Frontend:** React · Vite · Tailwind CSS
-- **HTTP Client:** Axios · REST APIs
-- **UI Components:** Lucide React · React Icons
+- **Frontend:** React · Tailwind CSS
+- **Backend:** Spring Boot · Spring MVC
+- **Database:** MySQL
 - **Routing:** React Router DOM
-- **Build Tool:** Vite with HMR
-- **Language:** JavaScript (ES6+)
-- **Infrastructure:** GitHub · NPM
+- **Build Tool:** Vite
+- **Language:** Java · JavaScript
+- **Infrastructure:** GitHub · Maven · NPM
 
 </td>
 
@@ -97,24 +111,24 @@ BatsUp Manager combines a React frontend, modern build tooling with Vite, respon
 
 # Features
 
-## Tournament Management Dashboard
+## Match Scheduling
 
 <table width="100%">
 <tr>
-<th width="50%" align="center">Dashboard Overview</th>
-<th width="50%" align="center">Tournament Analytics</th>
+<th width="50%" align="center">Match Scheduler</th>
+<th width="50%" align="center">Fixture Management</th>
 </tr>
 
 <tr>
 <td align="center" valign="top">
 
-<img src="./screenshots/dashboard.png" alt="Dashboard Overview"/>
+<img src="./screenshots/match-scheduling.png" alt="Match Scheduling"/>
 
 </td>
 
 <td align="center" valign="top">
 
-<img src="./screenshots/tournament-dashboard.png" alt="Tournament Analytics"/>
+<img src="./screenshots/fixture-management.png" alt="Fixture Management"/>
 
 </td>
 </tr>
@@ -122,97 +136,47 @@ BatsUp Manager combines a React frontend, modern build tooling with Vite, respon
 
 <br/>
 
-The management dashboard provides comprehensive visualization of tournament progress, team standings, player performance metrics, and match schedules.
+The scheduling engine enables organizers to create fixtures, assign venues, manage match timings, and monitor tournament progression efficiently.
 
 ### Core Capabilities
 
-- Real-time tournament metrics
-- Team standings and rankings
-- Interactive match scheduling
-- Player performance statistics
-- Team management interface
-- Match result tracking
-- Tournament progress monitoring
-- Performance analytics and insights
+- Match scheduling
+- Fixture management
+- Venue assignment
+- Team allocation
+- Schedule updates
+- Match tracking
+- Tournament progression
+- Automated organization
 
 ---
 
-## Tournament Organization
+## Tournament Analytics
 
 <div align="center">
 
-<img src="./screenshots/tournament-view.png" width="90%" />
+<img src="./screenshots/tournament-analytics.png" width="90%" />
 
 </div>
 
 <br/>
 
-The platform provides comprehensive tournament management capabilities, enabling users to organize tournaments, manage teams, schedule matches, and track comprehensive statistics across the entire event lifecycle.
+Advanced analytics provide insights into tournament progress, team standings, player performances, rankings, and overall competition statistics.
 
-```text
-Tournament Creation
-      ↓
-Team Management
-      ↓
-Player Registration
-      ↓
-Match Scheduling
-      ↓
-Live Match Tracking
-      ↓
-Results & Analytics
-```
+### Analytics Features
 
-### Organization Features
+- Tournament rankings
+- Team performance analysis
+- Match insights
+- Statistics dashboard
+- Historical records
+- Progress monitoring
+- Performance comparison
 
-- Tournament creation and setup
-- Team registration system
-- Player profile management
-- Flexible match scheduling
-- Real-time score updates
-- Comprehensive statistics tracking
-- Automated rankings calculation
 
 ---
 
-## Player Statistics Engine
-
-<table>
-<tr>
-<td width="50%">
-
-### Analytics Capabilities
-
-- Player performance metrics
-- Batting statistics analysis
-- Bowling statistics tracking
-- Match-by-match performance
-- Historical data comparison
-- Detailed player profiles
-
-</td>
-
-<td width="50%">
-
-```text
-Player Registration
-      ↓
-Match Participation
-      ↓
-Performance Tracking
-      ↓
-Statistics Processing
-      ↓
-Analytics Dashboard
-```
-
-</td>
-</tr>
-</table>
-
----
-
-## Team Management System
+## Team Management
 
 <div align="center">
 
@@ -222,27 +186,43 @@ Analytics Dashboard
 
 <br/>
 
-BatsUp includes intelligent team management systems capable of visualizing squad composition, player roles, team standings, performance metrics, and team progression.
+BatsUp includes intelligent team management systems capable of visualizing squad composition, player roles, team standings, performance metrics, and tournament participation records.
 
 ### Management Features
 
 - Squad composition tracking
 - Player role assignments
 - Team performance metrics
-- Squad statistics
 - Team standings visualization
+- Match history management
+- Team statistics
 - Performance analysis
-- Injury and availability tracking
+- Tournament participation records
 
 ---
 
-# System Workflow
+## Newsletter Management
 
 <div align="center">
 
-<img src="./screenshots/workflow.jpg" width="95%" />
+<img src="./screenshots/newsletter.png" width="90%" />
 
 </div>
+
+<br/>
+
+The newsletter system enables administrators to share tournament announcements, match updates, schedules, and important information with participants and audiences.
+
+### Newsletter Features
+
+- Tournament announcements
+- Match updates
+- Event notifications
+- Newsletter campaigns
+- Audience engagement
+- Information broadcasting
+- Schedule reminders
+- Communication management
 
 ---
 
@@ -250,29 +230,23 @@ BatsUp includes intelligent team management systems capable of visualizing squad
 
 ```text
  ┌──────────────────────────┐
- │    React Frontend        │
- │ Tournament Management    │
+ │      React Frontend      │
+ │  Tailwind CSS Interface  │
  └────────────┬─────────────┘
               │
-              │ HTTPS / Axios
-              ▼
- ┌──────────────────────────┐
- │      RESTful Backend     │
- │ APIs & Data Processing   │
- │ Business Logic           │
- └────────────┬─────────────┘
-              │
-      ┌───────┴────────┐
-      ▼                ▼
- ┌───────────┐   ┌─────────────┐
- │ Database  │   │ Cache Layer │
- │ Storage   │   │ (Redis)     │
- └───────────┘   └─────────────┘
+           REST API
               │
               ▼
  ┌──────────────────────────┐
- │   Analytics Engine       │
- │ Statistics & Insights    │
+ │     Spring Boot API      │
+ │  Business Logic Layer    │
+ │ CRUD Operations          │
+ └────────────┬─────────────┘
+              │
+              ▼
+ ┌──────────────────────────┐
+ │        MySQL DB          │
+ │ Tournament Data Storage  │
  └──────────────────────────┘
 ```
 
@@ -280,13 +254,13 @@ BatsUp includes intelligent team management systems capable of visualizing squad
 
 # Technology Stack
 
-| Frontend | Build Tools | HTTP & Routing | UI Components | Development |
+| Frontend | Backend | Database | UI Components | Development |
 |:---|:---|:---|:---|:---|
-| React.js | Vite | Axios | Lucide React | ESLint |
-| JavaScript | NPM | React Router DOM | React Icons | Autoprefixer |
-| HTML5 | Hot Module Reload | REST APIs | Tailwind CSS | PostCSS |
-| CSS3 | Rollup | API Integration | Component Library | Vite Plugins |
-| Tailwind CSS | Production Build | Data Fetching | Icon Sets | Package Management |
+| React.js | Spring Boot | MySQL | Lucide React | Maven |
+| JavaScript | Spring MVC | MySQL Workbench | React Icons | ESLint |
+| HTML5 | Spring Data JPA | Relational Database | Tailwind CSS | Postman |
+| CSS3 | REST APIs | MySQL Server | Responsive UI | Git |
+| Tailwind CSS | Java 17 | SQL Queries | Component Library | GitHub |
 
 ---
 
@@ -299,24 +273,25 @@ User Interaction
 React Components
       │
       ▼
-Axios HTTP Requests
-      │
- ┌────┴─────┐
- ▼          ▼
-API Calls  Routing
- │          │
- └────┬─────┘
-      ▼
-Backend Processing
+REST API Requests
       │
       ▼
-Database Operations
+Spring Boot Controllers
       │
       ▼
-Response & Display
+Service Layer
       │
       ▼
-Dashboard & Views
+Repository Layer
+      │
+      ▼
+MySQL Database
+      │
+      ▼
+Response Processing
+      │
+      ▼
+User Dashboard
 ```
 
 ---
@@ -327,21 +302,21 @@ Dashboard & Views
 BatsUp/
 │
 ├── src/
-│   ├── components/       # React components
-│   ├── pages/            # Page components
-│   ├── services/         # API services (Axios)
-│   ├── hooks/            # Custom React hooks
-│   ├── utils/            # Utility functions
-│   ├── styles/           # Tailwind styles
-│   ├── App.jsx           # Main app component
-│   └── main.jsx          # Entry point
+│   ├── components/
+│   ├── pages/
+│   ├── services/
+│   ├── hooks/
+│   ├── utils/
+│   ├── styles/
+│   ├── App.jsx
+│   └── main.jsx
 │
-├── public/               # Static assets
-├── screenshots/          # README assets
+├── public/
+├── screenshots/
 │
-├── vite.config.js        # Vite configuration
-├── package.json          # Dependencies
-├── index.html            # HTML template
+├── package.json
+├── vite.config.js
+├── index.html
 └── README.md
 ```
 
@@ -351,14 +326,14 @@ BatsUp/
 
 | Module | Description |
 |:---|:---|
-| Tournament Manager | Tournament creation and organization |
+| Tournament Manager | Tournament creation and management |
 | Team Management | Team registration and squad management |
-| Player Profiles | Player statistics and performance tracking |
-| Match Scheduler | Match scheduling and organization |
-| Analytics Engine | Performance metrics and statistics |
-| Dashboard | Real-time analytics visualization |
-| API Integration | Seamless backend communication |
-| Responsive UI | Mobile-friendly interface |
+| Match Scheduling | Fixture planning and scheduling |
+| Tournament Analytics | Rankings and performance analysis |
+| Newsletter Management | Announcements and updates |
+| Authentication | Secure user access |
+| Player Profiles | Statistics and records |
+| Responsive UI | Mobile and desktop support |
 
 ---
 
@@ -367,10 +342,10 @@ BatsUp/
 | Service | Platform |
 |:---|:---|
 | Frontend | Vercel / Netlify |
-| Build Output | Static Assets |
-| Backend API | Node/Express or Python |
-| Database | PostgreSQL / MongoDB |
-| Hosting | AWS / Azure / DigitalOcean |
+| Backend | Render / Railway |
+| Database | MySQL |
+| Build Tool | Maven + Vite |
+| Source Control | GitHub |
 
 ---
 
@@ -398,10 +373,11 @@ npm install
 <summary><b>Development Server</b></summary>
 
 ```bash
-# Start development server with HMR
+# Start development server
 npm run dev
 
-# Server runs at http://localhost:5173
+# Runs at
+http://localhost:5173
 ```
 
 </details>
@@ -409,13 +385,13 @@ npm run dev
 ---
 
 <details>
-<summary><b>Build for Production</b></summary>
+<summary><b>Production Build</b></summary>
 
 ```bash
-# Build optimized production bundle
+# Create optimized production build
 npm run build
 
-# Preview production build locally
+# Preview build
 npm run preview
 ```
 
@@ -427,10 +403,10 @@ npm run preview
 <summary><b>Linting</b></summary>
 
 ```bash
-# Run ESLint checks
+# Run ESLint
 npm run lint
 
-# Fix linting issues
+# Fix issues
 npm run lint -- --fix
 ```
 
@@ -443,52 +419,63 @@ npm run lint -- --fix
 Create a `.env` file in the root directory:
 
 ```env
-VITE_API_URL=http://your-api-endpoint.com
-VITE_API_KEY=your-api-key
-VITE_ENVIRONMENT=development
+VITE_API_URL=http://localhost:8080/api
 ```
 
 ---
 
 # API Integration
 
-The application uses Axios for HTTP requests. Configure your API endpoints in:
-
-```
-src/services/api.js
-```
+The frontend communicates with Spring Boot services using REST APIs.
 
 Example:
 
 ```javascript
-import axios from 'axios';
+import axios from "axios";
 
-const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+const api=axios.create({
+  baseURL:import.meta.env.VITE_API_URL
 });
 
-export default API;
+export default api;
 ```
 
 ---
 
 # Performance Optimization
 
-- **Code Splitting:** Lazy loading with React Router
-- **Bundle Optimization:** Vite's built-in tree-shaking
-- **CSS Purging:** Tailwind CSS purges unused styles
-- **Image Optimization:** Optimized asset delivery
-- **HMR:** Fast Hot Module Replacement during development
+- Component-based architecture
+- Optimized REST API communication
+- Tailwind CSS utility optimization
+- Code splitting and lazy loading
+- Responsive image delivery
+- Fast Vite production builds
+- Efficient state management
+- Optimized asset loading
 
 ---
 
 # Browser Support
 
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-- Mobile browsers
+- Chrome (Latest)
+- Firefox (Latest)
+- Safari (Latest)
+- Edge (Latest)
+- Mobile Browsers
+
+---
+
+# Screenshots Directory
+
+```text
+screenshots/
+├── dashboard.gif
+├── match-scheduling.png
+├── fixture-management.png
+├── tournament-analytics.png
+├── team-management.png
+└── newsletter.png
+```
 
 ---
 
@@ -503,6 +490,8 @@ export default API;
 ![React Powered](https://img.shields.io/badge/React-Powered-white?style=flat-square&labelColor=09090b)
 
 <br/>
+
+### Built with React • Spring Boot • Tailwind CSS • MySQL
 
 Star this repository if you found BatsUp useful
 
